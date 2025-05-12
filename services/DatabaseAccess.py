@@ -1,3 +1,5 @@
+import io
+
 import psycopg
 from abc import ABC, abstractmethod
 from pandas import DataFrame
@@ -7,6 +9,12 @@ class DatabaseAccess(ABC):
     @abstractmethod
     def db_connection(self) -> psycopg.Connection:
         """Abstract attribute for database connection"""
+        pass
+
+    @property
+    @abstractmethod
+    def data_file(self) -> io.TextIOWrapper:
+        """Abstract attribute for data file"""
         pass
 
     @abstractmethod
@@ -22,6 +30,11 @@ class DatabaseAccess(ABC):
     @abstractmethod
     def set_file(self, file_path: str):
         """Abstract method for setting the file path for the CSV file to be cleaned"""
+        pass
+
+    @abstractmethod
+    def close_file(self):
+        """Abstract method for closing the CSV file"""
         pass
 
     @abstractmethod
