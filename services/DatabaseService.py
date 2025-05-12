@@ -66,3 +66,7 @@ class DatabaseService(AbstractService, DatabaseAccess, ModelEditor):
     def load_from_file(self) -> bool:
         # TODO: Implement load_from_file
         pass
+
+    def reset_data(self):
+        # TODO: Implement reset_data
+        pass
