@@ -2,9 +2,9 @@ import io
 import psycopg
 from pandas import DataFrame, Series
 from model import DataModel
-from services.AbstractService import AbstractService
-from services.DatabaseAccess import DatabaseAccess
-from services.ModelEditor import ModelEditor
+from services import AbstractService
+from services import DatabaseAccess
+from services import ModelEditor
 
 
 class DatabaseService(AbstractService, DatabaseAccess, ModelEditor):
