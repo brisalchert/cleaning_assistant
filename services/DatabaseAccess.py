@@ -5,14 +5,8 @@ from pandas import DataFrame
 class DatabaseAccess(ABC):
     @property
     @abstractmethod
-    def db_connection(self):
+    def db_connection(self) -> psycopg.Connection:
         """Abstract attribute for database connection"""
-        pass
-
-    @db_connection.setter
-    @abstractmethod
-    def db_connection(self, value) -> psycopg.Connection:
-        """Abstract setter for database connection"""
         pass
 
     @abstractmethod
@@ -31,6 +25,6 @@ class DatabaseAccess(ABC):
         pass
 
     @abstractmethod
-    def get_tables(self) -> list[DataFrame]:
+    def get_tables(self) -> dict[str, DataFrame]:
         """Abstract method for getting a list of database tables as DataFrames"""
         pass
