@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from view import Screen
+from navigation import Screen
 
 class ViewModel(ABC):
     @property
