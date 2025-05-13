@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-
 from navigation import NavigationController, Screen
 from viewmodel import ViewModel
 
@@ -31,13 +30,3 @@ class AbstractView(ABC):
     def navigate(self, screen: Screen):
         """Navigate to a new screen"""
         self.nav_controller.navigate(screen)
-
-    @abstractmethod
-    def render(self):
-        """Abstract method for rendering the view"""
-        pass
-
-    @abstractmethod
-    def tear_down(self):
-        """Abstract method for tearing down the view"""
-        pass
