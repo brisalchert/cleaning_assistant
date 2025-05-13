@@ -8,7 +8,7 @@ class ViewModel(ABC):
         """Abstract property for navigation destination"""
         pass
 
-    @nav_destination.setter
     @abstractmethod
-    def nav_destination(self, value: Screen):
+    def set_nav_destination(self, destination: Screen):
         """Abstract setter for navigation destination"""
+        pass
