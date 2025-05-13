@@ -4,7 +4,6 @@ from navigation import Screen
 from services import DataCleaningService, AnalyticsService
 from viewmodel import ViewModel
 
-
 class AutoCleanViewModel(QObject, ViewModel):
     nav_destination_changed = pyqtSignal(Screen)
     cleaning_config_changed = pyqtSignal(dict)
