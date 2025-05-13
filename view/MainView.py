@@ -1,6 +1,5 @@
 from PyQt6.QtWidgets import QWidget
 from pandas import DataFrame
-
 from navigation import NavigationController
 from view.AbstractView import AbstractView
 from viewmodel import MainViewModel

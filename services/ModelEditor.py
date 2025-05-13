@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from pandas import Series
 
+
 class ModelEditor(ABC):
     @abstractmethod
     def create_row(self, table_name: str, columns: dict) -> bool:

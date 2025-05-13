@@ -1,5 +1,6 @@
 from navigation import Screen
 
+
 class NavigationController:
     def __init__(self):
         # TODO: Add views once implemented

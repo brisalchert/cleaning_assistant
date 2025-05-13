@@ -3,6 +3,7 @@ from navigation import NavigationController
 from view.AbstractView import AbstractView
 from viewmodel import AnalyticsViewModel
 
+
 class AnalyticsView(QWidget, AbstractView):
     @property
     def view_model(self):

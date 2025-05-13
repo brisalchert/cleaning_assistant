@@ -3,6 +3,7 @@ from navigation import Screen
 from services import DataCleaningService, AnalyticsService
 from viewmodel import ViewModel
 
+
 class AnalyticsViewModel(QObject, ViewModel):
     nav_destination_changed = pyqtSignal(Screen)
     stats_updated = pyqtSignal(dict)

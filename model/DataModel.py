@@ -1,5 +1,6 @@
 from pandas import DataFrame, Series
 
+
 class DataModel:
     def __init__(self, database: dict[str, DataFrame]):
         self.database = database

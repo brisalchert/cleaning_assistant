@@ -3,6 +3,7 @@ from navigation import NavigationController
 from view.AbstractView import AbstractView
 from viewmodel import AutoCleanViewModel
 
+
 class AutoCleanView(QWidget, AbstractView):
     @property
     def view_model(self):

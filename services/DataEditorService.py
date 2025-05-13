@@ -1,6 +1,5 @@
 import pandas as pd
 from pandas import Series, DataFrame
-
 from model import DataModel
 from services import AbstractService
 from services import ModelEditor

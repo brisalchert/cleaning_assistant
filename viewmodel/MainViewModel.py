@@ -4,6 +4,7 @@ from navigation import Screen
 from services import DatabaseService, DataEditorService
 from viewmodel import ViewModel
 
+
 class MainViewModel(QObject, ViewModel):
     # --- Signals for view ---
     nav_destination_changed = pyqtSignal(Screen)

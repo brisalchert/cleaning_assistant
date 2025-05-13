@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from navigation import NavigationController, Screen
 from viewmodel import ViewModel
 
+
 class AbstractView(ABC):
     @property
     @abstractmethod

@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from model import DataModel
 
+
 class AbstractService(ABC):
     @property
     @abstractmethod

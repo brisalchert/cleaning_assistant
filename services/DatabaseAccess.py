@@ -1,8 +1,8 @@
 import io
-
 import psycopg
 from abc import ABC, abstractmethod
 from pandas import DataFrame
+
 
 class DatabaseAccess(ABC):
     @property

@@ -5,6 +5,7 @@ from navigation import NavigationController
 from view.AbstractView import AbstractView
 from viewmodel import DataViewerViewModel
 
+
 class DataTableView(QWidget, AbstractView):
     @property
     def view_model(self):
