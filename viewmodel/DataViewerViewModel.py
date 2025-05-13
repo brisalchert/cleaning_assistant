@@ -8,8 +8,8 @@ class DataViewerViewModel(QObject, ViewModel):
     # --- Signals for view ---
     nav_destination_changed = pyqtSignal(Screen)
     data_changed = pyqtSignal(list[DataFrame])
-    is_editing = pyqtSignal(bool)
-    query_result = pyqtSignal(DataFrame)
+    is_editing_changed = pyqtSignal(bool)
+    query_result_changed = pyqtSignal(DataFrame)
 
     def __init__(self, data_editor_service: DataEditorService, query_service: QueryService):
         super().__init__()
@@ -30,8 +30,12 @@ class DataViewerViewModel(QObject, ViewModel):
 
     def toggle_editing(self):
         self._is_editing = not self._is_editing
-        self.is_editing.emit(self._is_editing)
+        self.is_editing_changed.emit(self._is_editing)
 
     def update_row(self, primary_key: str, columns: dict):
         # TODO: Implement update_row
         pass
+
+    def set_query_result(self, query_result: DataFrame):
+        self._query_result = query_result
+        self.query_result_changed.emit(query_result)

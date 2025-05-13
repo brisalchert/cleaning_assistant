@@ -1,4 +1,4 @@
-import pandas
+import pandas as pd
 from pandas import Series, DataFrame
 
 from model import DataModel
@@ -13,7 +13,7 @@ class DataEditorService(AbstractService, ModelEditor):
 
     def __init__(self, model: DataModel):
         self._model = model
-        self.current_table: DataFrame = pandas.DataFrame()
+        self.current_table: DataFrame = pd.DataFrame()
         self.undo_stack: list[DataFrame] = []
         self.redo_stack: list[DataFrame] = []
 

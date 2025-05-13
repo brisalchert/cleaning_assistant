@@ -1,6 +1,10 @@
 from PyQt6.QtWidgets import QWidget
 from pandas import DataFrame
+
+from navigation import NavigationController
 from view.AbstractView import AbstractView
+from viewmodel import MainViewModel
+
 
 class MainView(QWidget, AbstractView):
     @property
@@ -11,7 +15,7 @@ class MainView(QWidget, AbstractView):
     def nav_controller(self):
         return self._nav_controller
 
-    def __init__(self, view_model, nav_controller):
+    def __init__(self, view_model: MainViewModel, nav_controller: NavigationController):
         super().__init__()
         self._view_model = view_model
         self._nav_controller = nav_controller
