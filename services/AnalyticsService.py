@@ -48,6 +48,9 @@ class AnalyticsService(AbstractService, ModelEditor):
 
     # --- Subclass methods ---
 
+    def set_analytics_config(self, analytics_config):
+        self._analytics_config = analytics_config
+
     def calculate_missingness_stats(self):
         # TODO: Implement calculate_missingness_stats
         pass
