@@ -1,11 +1,11 @@
 import io
-from PyQt6.QtCore import QObject, pyqtSignal
+from PyQt6.QtCore import pyqtSignal
 from navigation import Screen
 from services import DataCleaningService, AnalyticsService
 from viewmodel import ViewModel
 
 
-class AutoCleanViewModel(QObject, ViewModel):
+class AutoCleanViewModel(ViewModel):
     nav_destination_changed = pyqtSignal(Screen)
     cleaning_config_changed = pyqtSignal(dict)
     analytics_config_changed = pyqtSignal(dict)

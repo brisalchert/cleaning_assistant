@@ -1,10 +1,10 @@
-from PyQt6.QtCore import QObject, pyqtSignal
+from PyQt6.QtCore import pyqtSignal
 from navigation import Screen
 from services import DataCleaningService, AnalyticsService
 from viewmodel import ViewModel
 
 
-class AnalyticsViewModel(QObject, ViewModel):
+class AnalyticsViewModel(ViewModel):
     nav_destination_changed = pyqtSignal(Screen)
     stats_updated = pyqtSignal(dict)
     plots_updated = pyqtSignal(dict)

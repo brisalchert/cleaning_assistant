@@ -1,12 +1,11 @@
 import pandas as pd
-from PyQt6.QtWidgets import QWidget
 from pandas import DataFrame
 from navigation import NavigationController
-from view.AbstractView import AbstractView
+from view import AbstractView
 from viewmodel import DataViewerViewModel
 
 
-class DataTableView(QWidget, AbstractView):
+class DataTableView(AbstractView):
     @property
     def view_model(self):
         return self._view_model

@@ -1,14 +1,13 @@
-from PyQt6.QtCore import pyqtSignal, QObject
-from pandas import DataFrame
+from PyQt6.QtCore import pyqtSignal
 from navigation import Screen
 from services import DatabaseService, DataEditorService
 from viewmodel import ViewModel
 
 
-class MainViewModel(QObject, ViewModel):
+class MainViewModel(ViewModel):
     # --- Signals for view ---
     nav_destination_changed = pyqtSignal(Screen)
-    data_changed = pyqtSignal(dict[str, DataFrame])
+    data_changed = pyqtSignal(dict)
     database_loaded_changed = pyqtSignal(bool)
 
     def __init__(self, database_service: DatabaseService, data_editor_service: DataEditorService):

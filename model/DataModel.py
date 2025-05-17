@@ -2,7 +2,7 @@ from pandas import DataFrame, Series
 
 
 class DataModel:
-    def __init__(self, database: dict[str, DataFrame]):
+    def __init__(self, database: dict[str, DataFrame] = None):
         self.database = database
 
     def read_table(self, table_name: str) -> DataFrame:

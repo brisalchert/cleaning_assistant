@@ -1,11 +1,10 @@
-from PyQt6.QtWidgets import QWidget
 from pandas import DataFrame
 from navigation import NavigationController
-from view.AbstractView import AbstractView
+from view import AbstractView
 from viewmodel import MainViewModel
 
 
-class MainView(QWidget, AbstractView):
+class MainView(AbstractView):
     @property
     def view_model(self):
         return self._view_model

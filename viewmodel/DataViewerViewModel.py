@@ -1,14 +1,14 @@
-from PyQt6.QtCore import pyqtSignal, QObject
+from PyQt6.QtCore import pyqtSignal
 from pandas import DataFrame
 from navigation import Screen
 from services import DataEditorService, QueryService
 from viewmodel import ViewModel
 
 
-class DataViewerViewModel(QObject, ViewModel):
+class DataViewerViewModel(ViewModel):
     # --- Signals for view ---
     nav_destination_changed = pyqtSignal(Screen)
-    data_changed = pyqtSignal(list[DataFrame])
+    data_changed = pyqtSignal(list)
     is_editing_changed = pyqtSignal(bool)
     query_result_changed = pyqtSignal(DataFrame)
 

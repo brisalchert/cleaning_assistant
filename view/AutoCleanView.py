@@ -1,10 +1,9 @@
-from PyQt6.QtWidgets import QWidget
 from navigation import NavigationController
-from view.AbstractView import AbstractView
+from view import AbstractView
 from viewmodel import AutoCleanViewModel
 
 
-class AutoCleanView(QWidget, AbstractView):
+class AutoCleanView(AbstractView):
     @property
     def view_model(self):
         return self._view_model

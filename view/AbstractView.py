@@ -1,9 +1,15 @@
-from abc import ABC, abstractmethod
+from abc import ABC, abstractmethod, ABCMeta
+
+from PyQt6.QtWidgets import QWidget
+
 from navigation import NavigationController, Screen
 from viewmodel import ViewModel
 
 
-class AbstractView(ABC):
+class MetaQWidgetABC(type(QWidget), ABCMeta):
+    pass
+
+class AbstractView(QWidget, metaclass=MetaQWidgetABC):
     @property
     @abstractmethod
     def view_model(self):
