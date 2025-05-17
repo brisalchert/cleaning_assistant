@@ -23,9 +23,13 @@ class MainViewModel(ViewModel):
         self.nav_destination_changed.emit(destination)
 
     def load_database(self, database: str, user: str, host: str, password: str, port: int = 5432):
-        self.database_service.set_connection(database, user, host, password, port)
-        self.database_service.load_from_database()
-        self._data = self.database_service.get_tables()
+        self.database_service.load_from_database({
+            "dbname": database,
+            "user": user,
+            "host": host,
+            "password": password,
+            "port": port
+        })
         self._database_loaded = True
         self.data_changed.emit(self._data)
         self.database_loaded_changed.emit(self._database_loaded)
