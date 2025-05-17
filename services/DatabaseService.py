@@ -25,7 +25,7 @@ class DatabaseService(AbstractService, DatabaseAccess, ModelEditor):
 
     # --- DatabaseAccess overrides ---
 
-    def set_connection_details(self, dbname: str, user: str, host: str, password: str, port: int = 5432):
+    def _set_connection_details(self, dbname: str, user: str, host: str, password: str, port: int = 5432):
         self._db_connection_details = {
             "dbname": dbname,
             "user": user,
@@ -34,7 +34,7 @@ class DatabaseService(AbstractService, DatabaseAccess, ModelEditor):
             "port": port
         }
 
-    def set_engine(self):
+    def _set_engine(self):
         db_config = self._db_connection_details
 
         self.engine = create_engine(URL.create(
@@ -46,13 +46,13 @@ class DatabaseService(AbstractService, DatabaseAccess, ModelEditor):
             database=db_config["dbname"]
         ))
 
-    def set_file(self, file_path: str):
+    def _set_file(self, file_path: str):
         self._data_file = open(file_path, "r")
 
-    def close_file(self):
+    def _close_file(self):
         self._data_file.close()
 
-    def get_tables(self, schema: str = "public") -> dict[str, DataFrame]:
+    def _load_tables(self, schema: str = "public") -> dict[str, DataFrame]:
         # Dictionary for table names
         table_names_dict = {}
 
@@ -93,17 +93,21 @@ class DatabaseService(AbstractService, DatabaseAccess, ModelEditor):
 
     def load_from_database(self, connection_details: dict) -> bool:
         # TODO: Add exception handling
-        self.set_connection_details(**connection_details)
-        self.set_engine()
+        self._set_connection_details(**connection_details)
+        self._set_engine()
 
-        tables = self.get_tables()
+        tables = self._load_tables()
         self._model.set_database(tables)
 
         return True
 
-    def load_from_file(self) -> bool:
+    def load_from_file(self, filepath: str) -> bool:
         # TODO: Implement load_from_file
         pass
+
+    def get_tables(self) -> dict[str, DataFrame]:
+        # TODO: Check access (do not allow view to edit model directly, may need to pass a copy)
+        return self._model.database
 
     def reset_data(self):
         # TODO: Implement reset_data

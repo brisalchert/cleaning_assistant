@@ -22,21 +22,23 @@ class MainViewModel(ViewModel):
         self._nav_destination = destination
         self.nav_destination_changed.emit(destination)
 
-    def load_database(self, database: str, user: str, host: str, password: str, port: int = 5432):
+    def load_database(self, dbname: str, user: str, host: str, password: str, port: int = 5432):
         self.database_service.load_from_database({
-            "dbname": database,
+            "dbname": dbname,
             "user": user,
             "host": host,
             "password": password,
             "port": port
         })
+
+        self._data = self.database_service.get_tables()
         self._database_loaded = True
         self.data_changed.emit(self._data)
         self.database_loaded_changed.emit(self._database_loaded)
 
     def load_file(self, file_path: str):
-        self.database_service.set_file(file_path)
-        self.database_service.load_from_file()
+        self.database_service.load_from_file(file_path)
+
         self._data = self.database_service.get_tables()
         self._database_loaded = True
         self.data_changed.emit(self._data)
