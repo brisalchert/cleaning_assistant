@@ -19,13 +19,14 @@ query_service = QueryService(model)
 data_cleaning_service = DataCleaningService(model)
 analytics_service = AnalyticsService(model)
 
+password = input("Enter DB password: ")
 
 # Set up data from PostGreSQL database
 connection_details = {
     "dbname": "steam_insights",
     "user": "postgres",
     "host": "localhost",
-    "password": "password",
+    "password": password,
     "port": 5432
 }
 
