@@ -7,24 +7,18 @@ from pandas import DataFrame
 class DatabaseAccess(ABC):
     @property
     @abstractmethod
-    def db_connection(self) -> psycopg.Connection:
-        """Abstract attribute for database connection"""
-        pass
-
-    @property
-    @abstractmethod
     def data_file(self) -> io.TextIOWrapper:
         """Abstract attribute for data file"""
         pass
 
     @abstractmethod
-    def set_connection(self, database: str, user: str, host: str, password: str, port: int = 5432):
+    def set_connection_details(self, database: str, user: str, host: str, password: str, port: int = 5432):
         """Abstract method for creating a connection to an external Postgres database"""
         pass
 
     @abstractmethod
-    def close_connection(self):
-        """Abstract method for closing the connection to the Postgres database"""
+    def set_engine(self):
+        """Abstract method for creating a connection engine to an external Postgres database"""
         pass
 
     @abstractmethod

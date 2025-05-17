@@ -5,6 +5,9 @@ class DataModel:
     def __init__(self, database: dict[str, DataFrame] = None):
         self.database = database
 
+    def set_database(self, database: dict[str, DataFrame]):
+        self.database = database
+
     def read_table(self, table_name: str) -> DataFrame:
         return self.database[table_name]
 

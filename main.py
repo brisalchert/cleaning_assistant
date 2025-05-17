@@ -2,9 +2,9 @@ import sys
 from PyQt6.QtWidgets import QApplication
 from model import DataModel
 from navigation import NavigationController
-from services import DatabaseService, DataEditorService
+from services import DatabaseService, DataEditorService, QueryService, DataCleaningService, AnalyticsService
 from view import MainView
-from viewmodel import MainViewModel
+from viewmodel import MainViewModel, DataViewerViewModel, AutoCleanViewModel, AnalyticsViewModel
 
 app = QApplication(sys.argv)
 
@@ -12,10 +12,32 @@ nav_controller = NavigationController()
 
 model = DataModel()
 
+# Initialize services
 database_service = DatabaseService(model)
 data_editor_service = DataEditorService(model)
+query_service = QueryService(model)
+data_cleaning_service = DataCleaningService(model)
+analytics_service = AnalyticsService(model)
 
+
+# Set up data from PostGreSQL database
+connection_details = {
+    "dbname": "steam_insights",
+    "user": "postgres",
+    "host": "localhost",
+    "password": "password",
+    "port": 5432
+}
+
+database_service.load_from_database(connection_details)
+
+# Initialize view models
 main_view_model = MainViewModel(database_service, data_editor_service)
+data_viewer_view_model = DataViewerViewModel(data_editor_service, query_service)
+auto_clean_view_model = AutoCleanViewModel(data_cleaning_service, analytics_service)
+analytics_view_model = AnalyticsViewModel(data_cleaning_service, analytics_service)
+
+# Initialize views
 main_view = MainView(main_view_model, nav_controller)
 
 main_view.show()
