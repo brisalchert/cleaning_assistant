@@ -1,6 +1,5 @@
 from PyQt6.QtWidgets import QMainWindow
 from navigation import Screen
-from view import AbstractView
 
 
 class NavigationController:
@@ -9,7 +8,7 @@ class NavigationController:
         self.views = None
         self.back_stack: list[Screen] = []
 
-    def initialize(self, window: QMainWindow, views: dict[Screen, AbstractView]):
+    def initialize(self, window: QMainWindow, views: dict):
         """Initialize the controller with the main window and views"""
         self.window = window
         self.views = views

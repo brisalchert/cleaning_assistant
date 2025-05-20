@@ -3,7 +3,7 @@ from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import QTableView, QVBoxLayout, QWidget, QScrollArea, QLabel, QSizePolicy, QHeaderView, QSplitter, \
     QPushButton, QHBoxLayout
 from pandas import DataFrame
-from model.DataFrameModel import DataFrameModel
+from model import DataFrameModel
 from navigation import NavigationController
 from view import AbstractView
 from viewmodel import MainViewModel

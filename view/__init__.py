@@ -1,6 +1,6 @@
-from .AbstractView import AbstractView
+from .abstract_view import AbstractView
 
-from .MainView import MainView
-from .DataTableView import DataTableView
-from .AutoCleanView import AutoCleanView
-from .AnalyticsView import AnalyticsView
+from .main_view import MainView
+from .data_table_view import DataTableView
+from .auto_clean_view import AutoCleanView
+from .analytics_view import AnalyticsView
