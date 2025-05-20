@@ -88,8 +88,10 @@ class MainView(AbstractView):
         pass
 
 def resize_table_view(table_view: QTableView):
-    # Set size policy
+    # Set size and scroll bar policies
     table_view.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+    table_view.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
+    table_view.setHorizontalScrollMode(QTableView.ScrollMode.ScrollPerPixel)
 
     # Set column widths
     header = table_view.horizontalHeader()
@@ -100,8 +102,8 @@ def resize_table_view(table_view: QTableView):
         row_height = table_view.verticalHeader().defaultSectionSize()
         header_height = table_view.horizontalHeader().height()
         frame_height = table_view.frameWidth() * 2
-        has_horizontal_scroll = table_view.horizontalScrollBar().isVisible()
-        scroll_bar_height = table_view.horizontalScrollBar().height() if has_horizontal_scroll else 0
+        scroll_bar_height = table_view.horizontalScrollBar().height()
+
         total_height = header_height + (row_height * table_view.model().rowCount()) + frame_height + scroll_bar_height
         table_view.setFixedHeight(total_height)
 
