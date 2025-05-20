@@ -3,6 +3,6 @@ from enum import Enum
 
 class Screen(Enum):
     MAIN = "Main"
-    DATATABLE = "DataTable"
-    AUTOCLEAN = "AutoClean"
+    DATA_TABLE = "DataTable"
+    AUTO_CLEAN = "AutoClean"
     ANALYTICS = "Analytics"

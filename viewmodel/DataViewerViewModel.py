@@ -16,7 +16,7 @@ class DataViewerViewModel(ViewModel):
         super().__init__()
         self.data_editor_service = data_editor_service
         self.query_service = query_service
-        self._nav_destination = Screen.DATATABLE
+        self._nav_destination = Screen.DATA_TABLE
         self._data = None
         self._is_editing = False
         self._query_result = None

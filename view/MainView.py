@@ -1,5 +1,7 @@
 from PyQt6 import QtCore
-from PyQt6.QtWidgets import QTableView, QVBoxLayout, QWidget, QScrollArea, QLabel, QSizePolicy, QHBoxLayout, QHeaderView
+from PyQt6.QtGui import QFont
+from PyQt6.QtWidgets import QTableView, QVBoxLayout, QWidget, QScrollArea, QLabel, QSizePolicy, QHBoxLayout, \
+    QHeaderView, QListView
 from pandas import DataFrame
 from model.DataFrameModel import DataFrameModel
 from navigation import NavigationController
@@ -20,6 +22,11 @@ class MainView(AbstractView):
         super().__init__()
         self._view_model = view_model
         self._nav_controller = nav_controller
+        self._nav_bar = None
+        self._nav_main = None
+        self._nav_auto_clean = None
+        self._nav_analytics = None
+        self._button_group = None
         self.tables = None
         self.stats: dict = {}
 
@@ -32,13 +39,26 @@ class MainView(AbstractView):
         scroll_area.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.table_container.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Maximum)
 
+        # Database layout
+        database_layout = QHBoxLayout()
+        self.database_label = QLabel("Database Preview")
+        self.database_label.setFont(QFont("Cascadia Code", 24))
+
+        # TODO: Add stats box and buttons
+        stats_box = QListView()
+        stats_box.setFixedWidth(400)
+
+        database_layout.addWidget(scroll_area)
+        database_layout.addWidget(stats_box)
+
+        # Navigation
+        self.setup_navigation()
+
         # Main layout
-        layout = QHBoxLayout()
-        layout.addWidget(scroll_area)
-        # TODO: Add stats box
-        box = QTableView()
-        box.setFixedWidth(400)
-        layout.addWidget(box)
+        layout = QVBoxLayout()
+        layout.addWidget(self._nav_bar)
+        layout.addWidget(self.database_label)
+        layout.addLayout(database_layout)
         self.setLayout(layout)
 
         # Connect ViewModel to UI
@@ -46,9 +66,12 @@ class MainView(AbstractView):
         self._view_model.data_changed.connect(self.update_tables)
         self._view_model.database_loaded_changed.connect(self.update_display)
 
+    def setup_navigation(self):
+        super().setup_navigation()
+        self._nav_main.setChecked(True)
+
     @QtCore.pyqtSlot(dict)
     def update_tables(self, tables: dict[str, DataFrame]):
-        # TODO: Add exception Handling
         self.tables = tables
 
         # Clear existing tables from layout

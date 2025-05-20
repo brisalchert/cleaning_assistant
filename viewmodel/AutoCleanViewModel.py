@@ -18,7 +18,7 @@ class AutoCleanViewModel(ViewModel):
         super().__init__()
         self.data_cleaning_service = data_cleaning_service
         self.analytics_service = analytics_service
-        self._nav_destination = Screen.AUTOCLEAN
+        self._nav_destination = Screen.AUTO_CLEAN
         self._cleaning_config = None
         self._analytics_config = None
         self._cleaning_running = False
