@@ -1,6 +1,7 @@
 from PyQt6 import QtCore
 from PyQt6.QtGui import QFont
-from PyQt6.QtWidgets import QTableView, QVBoxLayout, QWidget, QScrollArea, QLabel, QSizePolicy, QHeaderView, QSplitter
+from PyQt6.QtWidgets import QTableView, QVBoxLayout, QWidget, QScrollArea, QLabel, QSizePolicy, QHeaderView, QSplitter, \
+    QPushButton, QHBoxLayout
 from pandas import DataFrame
 from model.DataFrameModel import DataFrameModel
 from navigation import NavigationController
@@ -25,7 +26,7 @@ class MainView(AbstractView):
         self._nav_main = None
         self._nav_auto_clean = None
         self._nav_analytics = None
-        self._button_group = None
+        self._nav_button_group = None
         self.tables = None
         self.stats: dict = {}
         self.font = "Cascadia Code"
@@ -44,6 +45,22 @@ class MainView(AbstractView):
         self.database_label = QLabel("Database Preview")
         self.database_label.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
         self.database_label.setFont(QFont(self.font, 24))
+
+        # Main screen buttons
+        self.undo_button = QPushButton("Undo")
+        self.redo_button = QPushButton("Redo")
+        self.load_button = QPushButton("Load Database")
+        self.reset_button = QPushButton("Reset Database")
+        self.export_button = QPushButton("Export")
+
+        self.database_label_row = QHBoxLayout()
+        self.database_label_row.addWidget(self.database_label)
+        self.database_label_row.addStretch()
+
+        for button in [self.undo_button, self.redo_button, self.load_button, self.reset_button, self.export_button]:
+            button.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
+            button.setFont(QFont(self.font, 14))
+            self.database_label_row.addWidget(button)
 
         # Stats box and scroll area
         self.stats_box = QWidget()
@@ -70,11 +87,11 @@ class MainView(AbstractView):
         self.setup_navigation()
 
         # Main layout
-        layout = QVBoxLayout()
-        layout.addWidget(self._nav_bar)
-        layout.addWidget(self.database_label)
-        layout.addWidget(self.splitter)
-        self.setLayout(layout)
+        self.database_layout = QVBoxLayout()
+        self.database_layout.addWidget(self._nav_bar)
+        self.database_layout.addLayout(self.database_label_row)
+        self.database_layout.addWidget(self.splitter)
+        self.setLayout(self.database_layout)
 
         # Connect ViewModel to UI
         self._view_model.nav_destination_changed.connect(self.navigate)

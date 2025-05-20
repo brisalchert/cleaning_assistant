@@ -19,7 +19,7 @@ class AbstractView(QWidget, metaclass=MetaQWidgetABC):
         self._nav_main = None
         self._nav_auto_clean = None
         self._nav_analytics = None
-        self._button_group = None
+        self._nav_button_group = None
 
     @property
     @abstractmethod
@@ -61,11 +61,11 @@ class AbstractView(QWidget, metaclass=MetaQWidgetABC):
         self._nav_analytics = QPushButton("Analytics")
 
         # Create button group for exclusive selection
-        self._button_group = QButtonGroup(self)
-        self._button_group.addButton(self._nav_main)
-        self._button_group.addButton(self._nav_auto_clean)
-        self._button_group.addButton(self._nav_analytics)
-        self._button_group.setExclusive(True)
+        self._nav_button_group = QButtonGroup(self)
+        self._nav_button_group.addButton(self._nav_main)
+        self._nav_button_group.addButton(self._nav_auto_clean)
+        self._nav_button_group.addButton(self._nav_analytics)
+        self._nav_button_group.setExclusive(True)
 
         # Add buttons to layout
         nav_layout.addWidget(self._nav_main)
