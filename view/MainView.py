@@ -1,5 +1,5 @@
 from PyQt6 import QtCore
-from PyQt6.QtWidgets import QTableView, QVBoxLayout, QWidget, QScrollArea, QLabel, QSizePolicy, QHeaderView, QHBoxLayout
+from PyQt6.QtWidgets import QTableView, QVBoxLayout, QWidget, QScrollArea, QLabel, QSizePolicy, QHBoxLayout, QHeaderView
 from pandas import DataFrame
 from model.DataFrameModel import DataFrameModel
 from navigation import NavigationController
@@ -49,7 +49,6 @@ class MainView(AbstractView):
     @QtCore.pyqtSlot(dict)
     def update_tables(self, tables: dict[str, DataFrame]):
         # TODO: Add exception Handling
-        # TODO: Add other tables
         self.tables = tables
 
         # Clear existing tables from layout
@@ -87,22 +86,43 @@ class MainView(AbstractView):
         # TODO: Implement update_display
         pass
 
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+
+        # Resize table views when window is resized
+        if self.tables:
+            layout = self.table_container.layout()
+            for i in range(layout.count()):
+                widget = layout.itemAt(i).widget()
+                if isinstance(widget, QTableView):
+                    resize_table_view(widget)
+
 def resize_table_view(table_view: QTableView):
-    # Set size and scroll bar policies
-    table_view.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-    table_view.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
+    # Set size policy and scroll mode
+    table_view.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)
     table_view.setHorizontalScrollMode(QTableView.ScrollMode.ScrollPerPixel)
+
+    default_column_width = 200
 
     # Set column widths
     header = table_view.horizontalHeader()
-    header.setDefaultSectionSize(200)
+    header.setDefaultSectionSize(default_column_width)
+    header.setSectionResizeMode(QHeaderView.ResizeMode.Fixed)
+
+    # Calculate total width needed for all columns
+    total_width = default_column_width * table_view.model().columnCount()
+    total_width += table_view.frameWidth() * 2
+    total_width += table_view.verticalHeader().width()
+
+    table_view.setMaximumWidth(total_width)
 
     # Fit height to show all rows in preview
     def update_height():
         row_height = table_view.verticalHeader().defaultSectionSize()
         header_height = table_view.horizontalHeader().height()
         frame_height = table_view.frameWidth() * 2
-        scroll_bar_height = table_view.horizontalScrollBar().height()
+        has_scroll_bar = table_view.horizontalScrollBar().isVisible()
+        scroll_bar_height = table_view.horizontalScrollBar().height() if has_scroll_bar else 0
 
         total_height = header_height + (row_height * table_view.model().rowCount()) + frame_height + scroll_bar_height
         table_view.setFixedHeight(total_height)
