@@ -32,6 +32,7 @@ auto_clean_view = AutoCleanView(auto_clean_view_model, nav_controller)
 analytics_view = AnalyticsView(analytics_view_model, nav_controller)
 
 password = input("Enter DB password: ")
+print("Loading...")
 
 # Set up data from PostGreSQL database
 connection_details = {
