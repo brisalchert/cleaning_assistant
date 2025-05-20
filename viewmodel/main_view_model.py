@@ -22,9 +22,9 @@ class MainViewModel(ViewModel):
         self._nav_destination = destination
         self.nav_destination_changed.emit(destination)
 
-    def load_database(self, dbname: str, user: str, host: str, password: str, port: int = 5432):
+    def load_database(self, db_name: str, user: str, host: str, password: str, port: int = 5432):
         self.database_service.load_from_database({
-            "dbname": dbname,
+            "db_name": db_name,
             "user": user,
             "host": host,
             "password": password,

@@ -25,9 +25,9 @@ class DatabaseService(AbstractService, DatabaseAccess, ModelEditor):
 
     # --- DatabaseAccess overrides ---
 
-    def _set_connection_details(self, dbname: str, user: str, host: str, password: str, port: int = 5432):
+    def _set_connection_details(self, db_name: str, user: str, host: str, password: str, port: int = 5432):
         self._db_connection_details = {
-            "dbname": dbname,
+            "db_name": db_name,
             "user": user,
             "host": host,
             "password": password,
@@ -43,7 +43,7 @@ class DatabaseService(AbstractService, DatabaseAccess, ModelEditor):
             password=db_config["password"],
             host=db_config["host"],
             port=db_config["port"],
-            database=db_config["dbname"]
+            database=db_config["db_name"]
         ))
 
     def _set_file(self, file_path: str):

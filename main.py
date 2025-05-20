@@ -60,7 +60,7 @@ if __name__ == '__main__':
 
     # Set up data from PostGreSQL database
     connection_details = {
-        "dbname": "steam_insights",
+        "db_name": "steam_insights",
         "user": "postgres",
         "host": "localhost",
         "password": password,

@@ -1,11 +1,13 @@
 from PyQt6 import QtCore
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import QTableView, QVBoxLayout, QWidget, QScrollArea, QLabel, QSizePolicy, QHeaderView, QSplitter, \
-    QPushButton, QHBoxLayout
+    QPushButton, QHBoxLayout, QDialog, QMessageBox
 from pandas import DataFrame
+from sqlalchemy.exc import ProgrammingError, IntegrityError, DBAPIError
 from model import DataFrameModel
 from navigation import NavigationController
 from view import AbstractView
+from view.database_connection_dialog import DatabaseConnectionDialog
 from viewmodel import MainViewModel
 
 
@@ -50,6 +52,7 @@ class MainView(AbstractView):
         self.undo_button = QPushButton("Undo")
         self.redo_button = QPushButton("Redo")
         self.load_button = QPushButton("Load Database")
+        self.load_button.clicked.connect(self.show_database_connection_dialog)
         self.reset_button = QPushButton("Reset Database")
         self.export_button = QPushButton("Export")
 
@@ -209,7 +212,7 @@ class MainView(AbstractView):
                 if isinstance(widget, QTableView):
                     resize_table_view(widget)
 
-    def on_splitter_moved(self, pos, index):
+    def on_splitter_moved(self):
         # Resize table views when splitter is moved
         if self.tables:
             layout = self.table_container.layout()
@@ -217,6 +220,31 @@ class MainView(AbstractView):
                 widget = layout.itemAt(i).widget()
                 if isinstance(widget, QTableView):
                     resize_table_view(widget)
+
+    def show_database_connection_dialog(self):
+        print("method called")
+        dialog = DatabaseConnectionDialog()
+        print("dialog created")
+        result = dialog.exec()
+
+        if result == QDialog.DialogCode.Accepted:
+            # Get connection details and signal view model
+            connection_details = dialog.get_connection_details()
+
+            try:
+                self._view_model.load_database(**connection_details)
+
+                return
+            except ProgrammingError as e:
+                print(f"SQL syntax error: {e}")
+            except IntegrityError as e:
+                print(f"Database integrity error: {e}")
+            except DBAPIError as e:
+                print(f"Database error: {e}")
+            except Exception as e:
+                print(f"An unexpected error occurred: {e}")
+
+            QMessageBox.critical(self, "Connection Error", "An error occurred while connecting to the database.")
 
 def resize_table_view(table_view: QTableView):
     # Set size policy and scroll mode
