@@ -33,6 +33,29 @@ class MainView(AbstractView):
         self.stats: dict = {}
         self.font = "Cascadia Code"
 
+        # ----------------------------------------------------------------------
+        # --- No Database Loaded Layout ---
+        # ----------------------------------------------------------------------
+
+        self.no_database_label = QLabel("No Database Loaded")
+        self.no_database_label.setFont(QFont(self.font, 24, QFont.Weight.Bold))
+        self.no_database_description = QLabel("Use the top right buttons to load a database!")
+        self.no_database_description.setFont(QFont(self.font, 14, QFont.Weight.Normal))
+
+        self.no_database_container = QWidget()
+        self.no_database_container.setLayout(QVBoxLayout())
+        self.no_database_container.layout().setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+        self.no_database_container.layout().addWidget(self.no_database_label)
+        self.no_database_container.layout().addWidget(self.no_database_description)
+
+        self.no_database_scroll_area = QScrollArea()
+        self.no_database_scroll_area.setWidget(self.no_database_container)
+        self.no_database_scroll_area.setWidgetResizable(True)
+
+        # ----------------------------------------------------------------------
+        # --- Database Layout ---
+        # ----------------------------------------------------------------------
+
         # Set up scroll area for tables with container
         self.table_container = QWidget()
         self.table_container.setLayout(QVBoxLayout())
@@ -53,14 +76,13 @@ class MainView(AbstractView):
         self.redo_button = QPushButton("Redo")
         self.load_button = QPushButton("Load Database")
         self.load_button.clicked.connect(self.show_database_connection_dialog)
-        self.reset_button = QPushButton("Reset Database")
         self.export_button = QPushButton("Export")
 
         self.database_label_row = QHBoxLayout()
         self.database_label_row.addWidget(self.database_label)
         self.database_label_row.addStretch()
 
-        for button in [self.undo_button, self.redo_button, self.load_button, self.reset_button, self.export_button]:
+        for button in [self.undo_button, self.redo_button, self.load_button, self.export_button]:
             button.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
             button.setFont(QFont(self.font, 14))
             self.database_label_row.addWidget(button)
@@ -93,8 +115,17 @@ class MainView(AbstractView):
         self.database_layout = QVBoxLayout()
         self.database_layout.addWidget(self._nav_bar)
         self.database_layout.addLayout(self.database_label_row)
+        self.database_layout.addWidget(self.no_database_scroll_area)
         self.database_layout.addWidget(self.splitter)
+
+        # ----------------------------------------------------------------------
+        # --- Initialize UI ---
+        # ----------------------------------------------------------------------
+
+        # Initialize UI with the layout
         self.setLayout(self.database_layout)
+        self.no_database_scroll_area.setVisible(True)
+        self.splitter.setVisible(False)
 
         # Connect ViewModel to UI
         self._view_model.nav_destination_changed.connect(self.navigate)
@@ -144,8 +175,12 @@ class MainView(AbstractView):
 
     @QtCore.pyqtSlot(bool)
     def update_display(self, loaded: bool):
-        # TODO: Implement update_display
-        pass
+        if loaded:
+            self.no_database_scroll_area.setVisible(False)
+            self.splitter.setVisible(True)
+        else:
+            self.no_database_scroll_area.setVisible(True)
+            self.splitter.setVisible(False)
 
     @QtCore.pyqtSlot(dict)
     def populate_stats(self, tables: dict[str, DataFrame]):
@@ -222,9 +257,7 @@ class MainView(AbstractView):
                     resize_table_view(widget)
 
     def show_database_connection_dialog(self):
-        print("method called")
         dialog = DatabaseConnectionDialog()
-        print("dialog created")
         result = dialog.exec()
 
         if result == QDialog.DialogCode.Accepted:

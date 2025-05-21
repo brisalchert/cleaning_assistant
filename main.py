@@ -55,19 +55,14 @@ if __name__ == '__main__':
         }
     )
 
-    password = input("Enter DB password: ")
-    print("Loading...")
-
     # Set up data from PostGreSQL database
     connection_details = {
         "db_name": "steam_insights",
         "user": "postgres",
         "host": "localhost",
-        "password": password,
+        "password": "",
         "port": 5432
     }
-
-    main_view_model.load_database(**connection_details)
 
     # Initialize the UI
     window.show()
