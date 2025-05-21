@@ -30,6 +30,7 @@ class MainView(AbstractView):
         self._nav_analytics = None
         self._nav_button_group = None
         self.tables = None
+        self.progress_message_box = None
         self.stats: dict = {}
         self.font = "Cascadia Code"
 
@@ -132,6 +133,8 @@ class MainView(AbstractView):
         self._view_model.data_changed.connect(self.update_tables)
         self._view_model.data_changed.connect(self.populate_stats)
         self._view_model.database_loaded_changed.connect(self.update_display)
+        self._view_model.database_loading_progress.connect(self.update_loading_progress)
+        self._view_model.database_loading_error.connect(self.show_database_loading_error)
 
     def setup_navigation(self):
         super().setup_navigation()
@@ -175,6 +178,14 @@ class MainView(AbstractView):
 
     @QtCore.pyqtSlot(bool)
     def update_display(self, loaded: bool):
+        """Update the main view and the progress message box."""
+        if self.progress_message_box:
+            if loaded:
+                self.progress_message_box.setText("Database loaded successfully.")
+            else:
+                self.progress_message_box.setText("Failed to load the database.")
+            self.progress_message_box.button(QMessageBox.StandardButton.Ok).setEnabled(True)
+
         if loaded:
             self.no_database_scroll_area.setVisible(False)
             self.splitter.setVisible(True)
@@ -263,21 +274,31 @@ class MainView(AbstractView):
         if result == QDialog.DialogCode.Accepted:
             # Get connection details and signal view model
             connection_details = dialog.get_connection_details()
+            self.show_progress_message_box()
+            self._view_model.load_database(**connection_details)
 
-            try:
-                self._view_model.load_database(**connection_details)
+    def show_progress_message_box(self):
+        """Show a message box for database loading progress."""
+        self.progress_message_box = QMessageBox()
+        self.progress_message_box.setIcon(QMessageBox.Icon.Information)
+        self.progress_message_box.setWindowTitle("Database Loading")
+        self.progress_message_box.setText("Loading Database...")
+        self.progress_message_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+        self.progress_message_box.button(QMessageBox.StandardButton.Ok).setEnabled(False)
+        self.progress_message_box.show()
 
-                return
-            except ProgrammingError as e:
-                print(f"SQL syntax error: {e}")
-            except IntegrityError as e:
-                print(f"Database integrity error: {e}")
-            except DBAPIError as e:
-                print(f"Database error: {e}")
-            except Exception as e:
-                print(f"An unexpected error occurred: {e}")
+    def update_loading_progress(self, progress: str):
+        """Update the progress message box."""
+        if self.progress_message_box:
+            self.progress_message_box.setText(progress)
 
-            QMessageBox.critical(self, "Connection Error", "An error occurred while connecting to the database.")
+    def show_database_loading_error(self, error: str):
+        """Handle database loading errors."""
+        if self.progress_message_box:
+            self.progress_message_box.setIcon(QMessageBox.Icon.Critical)
+            self.progress_message_box.setText("Database Loading Error")
+            self.progress_message_box.setInformativeText(error)
+            self.progress_message_box.button(QMessageBox.StandardButton.Ok).setEnabled(True)
 
 def resize_table_view(table_view: QTableView):
     # Set size policy and scroll mode
