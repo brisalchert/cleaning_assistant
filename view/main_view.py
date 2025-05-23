@@ -1,3 +1,4 @@
+from functools import partial
 from PyQt6 import QtCore
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtGui import QFont
@@ -181,8 +182,8 @@ class MainView(AbstractView):
             model = DataFrameModel(df_preview)
             table_view.setModel(model)
 
-            # Add click event
-            table_view.clicked.connect(lambda: self.enter_table_view(table_name))
+            # Add click event, using partial to avoid late binding
+            table_view.clicked.connect(partial(self.enter_table_view, table_name))
 
             # Update table sizing
             resize_table_view(table_view)
