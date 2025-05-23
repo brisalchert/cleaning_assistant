@@ -2,7 +2,7 @@ import pandas as pd
 from PyQt6 import QtCore
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import QVBoxLayout, QWidget, QSizePolicy, QLabel, QComboBox, QHBoxLayout, QTableView, QScrollArea, \
-    QSplitter
+    QSplitter, QTextEdit, QPushButton
 from pandas import DataFrame
 from model import DataFrameModel
 from navigation import NavigationController
@@ -70,23 +70,36 @@ class DataTableView(AbstractView):
         # Set up stats and query section
         self.stats_box = QWidget()
         self.stats_box.setLayout(QVBoxLayout())
+        self.stats_box.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
         stats_scroll_area = QScrollArea()
         stats_scroll_area.setWidget(self.stats_box)
         stats_scroll_area.setWidgetResizable(True)
         stats_scroll_area.setMinimumWidth(300)
 
+        self.query_window = QWidget()
+        self.query_window.setLayout(QVBoxLayout())
+        self.query_window.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
+        self.query_text_edit = QTextEdit()
+        self.execute_button = QPushButton("Execute Query")
+        self.query_window.layout().addWidget(self.query_text_edit)
+        self.query_window.layout().addWidget(self.execute_button)
+
+        right_panel = QSplitter(QtCore.Qt.Orientation.Vertical)
+        right_panel.addWidget(self.query_window)
+        right_panel.addWidget(stats_scroll_area)
+
         # Create a splitter for the table view and stats box
-        self.splitter = QSplitter(QtCore.Qt.Orientation.Horizontal)
-        self.splitter.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        self.splitter.addWidget(table_scroll_area)
-        self.splitter.addWidget(stats_scroll_area)
-        self.splitter.setSizes([900, 300])
-        self.splitter.setCollapsible(0, False)
-        self.splitter.setCollapsible(1, False)
-        self.splitter.setHandleWidth(5)
+        self.horizontal_splitter = QSplitter(QtCore.Qt.Orientation.Horizontal)
+        self.horizontal_splitter.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        self.horizontal_splitter.addWidget(table_scroll_area)
+        self.horizontal_splitter.addWidget(right_panel)
+        self.horizontal_splitter.setSizes([900, 300])
+        self.horizontal_splitter.setCollapsible(0, False)
+        self.horizontal_splitter.setCollapsible(1, False)
+        self.horizontal_splitter.setHandleWidth(5)
 
         # Connect splitter changes to table resizing
-        self.splitter.splitterMoved.connect(self.on_splitter_moved)
+        self.horizontal_splitter.splitterMoved.connect(self.on_splitter_moved)
 
         # Navigation
         self.setup_navigation()
@@ -95,7 +108,7 @@ class DataTableView(AbstractView):
         self.data_table_layout = QVBoxLayout()
         self.data_table_layout.addWidget(self._nav_bar)
         self.data_table_layout.addLayout(self.button_row)
-        self.data_table_layout.addWidget(self.splitter)
+        self.data_table_layout.addWidget(self.horizontal_splitter)
 
         # ----------------------------------------------------------------------
         # --- Initialize UI ---
