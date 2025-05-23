@@ -8,7 +8,7 @@ from viewmodel import ViewModel
 class DataViewerViewModel(ViewModel):
     # --- Signals for view ---
     nav_destination_changed = pyqtSignal(Screen)
-    data_changed = pyqtSignal(list)
+    data_changed = pyqtSignal(dict)
     is_editing_changed = pyqtSignal(bool)
     query_result_changed = pyqtSignal(DataFrame)
 
@@ -17,6 +17,7 @@ class DataViewerViewModel(ViewModel):
         self.data_editor_service = data_editor_service
         self.query_service = query_service
         self._nav_destination = Screen.DATA_TABLE
+        self._table_name = None
         self._data = None
         self._is_editing = False
         self._query_result = None
@@ -25,17 +26,21 @@ class DataViewerViewModel(ViewModel):
         self._nav_destination = destination
         self.nav_destination_changed.emit(destination)
 
-    def load_table(self):
-        # TODO: Implement load_table
-        pass
+    def set_table(self, table_name: str):
+        # Set and retrieve table in the service
+        self.data_editor_service.set_table(table_name)
+        self._table_name = table_name
+        self._data = self.data_editor_service.get_current_table()
+        self.data_changed.emit({"table_name": self._table_name, "data": self._data})
 
     def toggle_editing(self):
         self._is_editing = not self._is_editing
         self.is_editing_changed.emit(self._is_editing)
 
     def update_row(self, primary_key: str, columns: dict):
-        # TODO: Implement update_row
-        pass
+        self.data_editor_service.update_row(self._table_name, primary_key, columns)
+        self._data = self.data_editor_service.get_current_table()
+        self.data_changed.emit({self._table_name: self._data})
 
     def set_query_result(self, query_result: DataFrame):
         self._query_result = query_result

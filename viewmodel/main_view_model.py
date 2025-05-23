@@ -105,8 +105,5 @@ class MainViewModel(ViewModel):
     def redo_change(self):
         self.data_editor_service.redo_change()
 
-    def set_data_viewer_table(self, table_name: str):
-        self.data_editor_service.set_table(table_name)
-
     def export_data(self):
         self.data_editor_service.export_data()

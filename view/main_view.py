@@ -1,4 +1,5 @@
 from PyQt6 import QtCore
+from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import QTableView, QVBoxLayout, QWidget, QScrollArea, QLabel, QSizePolicy, QSplitter, \
     QPushButton, QHBoxLayout, QDialog, QMessageBox
@@ -13,6 +14,9 @@ from viewmodel import MainViewModel
 
 
 class MainView(AbstractView):
+    # Signal for switching to table view
+    data_viewer_table_name = pyqtSignal(str)
+
     @property
     def view_model(self):
         return self._view_model
@@ -299,7 +303,6 @@ class MainView(AbstractView):
         self.progress_message_box.setText("Establishing Connection...")
         self.progress_message_box.setStandardButtons(QMessageBox.StandardButton.Ok)
         self.progress_message_box.button(QMessageBox.StandardButton.Ok).setEnabled(False)
-        self.progress_message_box.resize(300, 100)
         self.progress_message_box.show()
 
     def update_loading_progress(self, progress: str):
@@ -316,5 +319,5 @@ class MainView(AbstractView):
             self.progress_message_box.button(QMessageBox.StandardButton.Ok).setEnabled(True)
 
     def enter_table_view(self, table_name: str):
-        self._view_model.set_data_viewer_table(table_name)
+        self.data_viewer_table_name.emit(table_name)
         self._view_model.set_nav_destination(Screen.DATA_TABLE)

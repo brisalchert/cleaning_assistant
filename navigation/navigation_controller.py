@@ -1,4 +1,3 @@
-from PyQt6.QtWidgets import QMainWindow
 from navigation import Screen
 
 
@@ -8,10 +7,14 @@ class NavigationController:
         self.views = None
         self.back_stack: list[Screen] = []
 
-    def initialize(self, window: QMainWindow, views: dict):
+    def initialize(self, window, views: dict):
         """Initialize the controller with the main window and views"""
         self.window = window
         self.views = views
+
+        for view in views.values():
+            self.window.stack.addWidget(view)
+        self.window.stack.setCurrentWidget(self.views[Screen.MAIN])
 
     def navigate(self, screen: Screen):
         """Navigate to a specific view"""
@@ -19,7 +22,7 @@ class NavigationController:
             raise RuntimeError("NavigationController not initialized")
 
         if screen in self.views:
-            self.window.setCentralWidget(self.views[screen])
+            self.window.stack.setCurrentWidget(self.views[screen])
             self.back_stack.append(screen)
 
     def pop_back_stack(self):

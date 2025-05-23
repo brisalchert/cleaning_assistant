@@ -1,5 +1,5 @@
 import sys
-from PyQt6.QtWidgets import QApplication, QMainWindow
+from PyQt6.QtWidgets import QApplication, QMainWindow, QStackedWidget
 from model import DataModel
 from navigation import NavigationController, Screen
 from services import DatabaseService, DataEditorService, QueryService, DataCleaningService, AnalyticsService
@@ -11,7 +11,8 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("Data Cleaning Assistant")
         self.setGeometry(100, 100, 1200, 800)
-        self.setCentralWidget(main_view)
+        self.stack = QStackedWidget()
+        self.setCentralWidget(self.stack)
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
@@ -55,14 +56,8 @@ if __name__ == '__main__':
         }
     )
 
-    # Set up data from PostGreSQL database
-    connection_details = {
-        "db_name": "steam_insights",
-        "user": "postgres",
-        "host": "localhost",
-        "password": "",
-        "port": 5432
-    }
+    # Connect MainView signal to DataViewerViewModel's set_table method
+    main_view.data_viewer_table_name.connect(data_viewer_view_model.set_table)
 
     # Initialize the UI
     window.show()
