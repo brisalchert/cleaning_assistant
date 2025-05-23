@@ -1,5 +1,5 @@
 from PyQt6 import QtCore
-from PyQt6.QtWidgets import QDialog, QFormLayout, QLineEdit, QDialogButtonBox, QVBoxLayout
+from PyQt6.QtWidgets import QDialog, QFormLayout, QLineEdit, QDialogButtonBox, QVBoxLayout, QCheckBox, QLabel
 
 
 class DatabaseConnectionDialog(QDialog):
@@ -33,6 +33,13 @@ class DatabaseConnectionDialog(QDialog):
         self.port_input.setText("5432")
         form_layout.addRow("Port", self.port_input)
 
+        self.save_parameters_checkbox = QCheckBox()
+        self.save_parameters_checkbox.setChecked(False)
+        form_layout.addRow("Save Parameters?", self.save_parameters_checkbox)
+
+        self.save_parameters_note = QLabel("Parameters are encrypted using symmetric key encryption.")
+        form_layout.addRow(self.save_parameters_note)
+
         # Box for dialog buttons
         button_box = QDialogButtonBox(QtCore.Qt.Orientation.Horizontal)
         button_box.addButton(QDialogButtonBox.StandardButton.Ok)
@@ -53,4 +60,5 @@ class DatabaseConnectionDialog(QDialog):
             "host": self.host_input.text(),
             "password": self.password_input.text(),
             "port": self.port_input.text(),
+            "save": self.save_parameters_checkbox.isChecked()
         }

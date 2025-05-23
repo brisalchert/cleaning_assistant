@@ -20,6 +20,7 @@ class AbstractView(QWidget, metaclass=MetaQWidgetABC):
         self._nav_auto_clean = None
         self._nav_analytics = None
         self._nav_button_group = None
+        self.font = "Cascadia Code"
 
     @property
     @abstractmethod

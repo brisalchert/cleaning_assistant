@@ -1,11 +1,12 @@
 from PyQt6 import QtCore
 from PyQt6.QtGui import QFont
-from PyQt6.QtWidgets import QTableView, QVBoxLayout, QWidget, QScrollArea, QLabel, QSizePolicy, QHeaderView, QSplitter, \
+from PyQt6.QtWidgets import QTableView, QVBoxLayout, QWidget, QScrollArea, QLabel, QSizePolicy, QSplitter, \
     QPushButton, QHBoxLayout, QDialog, QMessageBox
 from pandas import DataFrame
-from sqlalchemy.exc import ProgrammingError, IntegrityError, DBAPIError
 from model import DataFrameModel
-from navigation import NavigationController
+from navigation import NavigationController, Screen
+from utils import resize_table_view, load_key, generate_and_store_key
+from utils.security import load_encrypted_db_credentials
 from view import AbstractView
 from view.database_connection_dialog import DatabaseConnectionDialog
 from viewmodel import MainViewModel
@@ -32,7 +33,6 @@ class MainView(AbstractView):
         self.tables = None
         self.progress_message_box = None
         self.stats: dict = {}
-        self.font = "Cascadia Code"
 
         # ----------------------------------------------------------------------
         # --- No Database Loaded Layout ---
@@ -73,6 +73,7 @@ class MainView(AbstractView):
         self.database_label.setFont(QFont(self.font, 24))
 
         # Main screen buttons
+        # TODO: Add remaining button functions
         self.undo_button = QPushButton("Undo")
         self.redo_button = QPushButton("Redo")
         self.load_button = QPushButton("Load Database")
@@ -136,6 +137,14 @@ class MainView(AbstractView):
         self._view_model.database_loading_progress.connect(self.update_loading_progress)
         self._view_model.database_loading_error.connect(self.show_database_loading_error)
 
+        # Check for existing database credentials
+        generate_and_store_key()  # Does nothing if key already exists
+        db_credentials = load_encrypted_db_credentials(load_key())
+        if db_credentials:
+            self._view_model.set_save_credentials(True)
+            self._view_model.load_database(**db_credentials)
+            self.show_progress_message_box()
+
     def setup_navigation(self):
         super().setup_navigation()
         self._nav_main.setChecked(True)
@@ -167,6 +176,9 @@ class MainView(AbstractView):
             table_view = QTableView()
             model = DataFrameModel(df_preview)
             table_view.setModel(model)
+
+            # Add click event
+            table_view.clicked.connect(lambda: self.enter_table_view(table_name))
 
             # Update table sizing
             resize_table_view(table_view)
@@ -275,16 +287,19 @@ class MainView(AbstractView):
             # Get connection details and signal view model
             connection_details = dialog.get_connection_details()
             self.show_progress_message_box()
+            save_credentials = connection_details.pop("save")
+            self._view_model.set_save_credentials(save_credentials)
             self._view_model.load_database(**connection_details)
 
     def show_progress_message_box(self):
         """Show a message box for database loading progress."""
         self.progress_message_box = QMessageBox()
-        self.progress_message_box.setIcon(QMessageBox.Icon.Information)
+        self.progress_message_box.setIcon(QMessageBox.Icon.NoIcon)
         self.progress_message_box.setWindowTitle("Database Loading")
-        self.progress_message_box.setText("Loading Database...")
+        self.progress_message_box.setText("Establishing Connection...")
         self.progress_message_box.setStandardButtons(QMessageBox.StandardButton.Ok)
         self.progress_message_box.button(QMessageBox.StandardButton.Ok).setEnabled(False)
+        self.progress_message_box.resize(300, 100)
         self.progress_message_box.show()
 
     def update_loading_progress(self, progress: str):
@@ -300,35 +315,6 @@ class MainView(AbstractView):
             self.progress_message_box.setInformativeText(error)
             self.progress_message_box.button(QMessageBox.StandardButton.Ok).setEnabled(True)
 
-def resize_table_view(table_view: QTableView):
-    # Set size policy and scroll mode
-    table_view.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)
-    table_view.setHorizontalScrollMode(QTableView.ScrollMode.ScrollPerPixel)
-
-    default_column_width = 200
-
-    # Set column widths
-    header = table_view.horizontalHeader()
-    header.setDefaultSectionSize(default_column_width)
-    header.setSectionResizeMode(QHeaderView.ResizeMode.Fixed)
-
-    # Calculate total width needed for all columns
-    total_width = default_column_width * table_view.model().columnCount()
-    total_width += table_view.frameWidth() * 2
-    total_width += table_view.verticalHeader().width()
-
-    table_view.setMaximumWidth(total_width)
-
-    # Fit height to show all rows in preview
-    def update_height():
-        row_height = table_view.verticalHeader().defaultSectionSize()
-        header_height = table_view.horizontalHeader().height()
-        frame_height = table_view.frameWidth() * 2
-        has_scroll_bar = table_view.horizontalScrollBar().isVisible()
-        scroll_bar_height = table_view.horizontalScrollBar().height() if has_scroll_bar else 0
-
-        total_height = header_height + (row_height * table_view.model().rowCount()) + frame_height + scroll_bar_height
-        table_view.setFixedHeight(total_height)
-
-    # Defer until event loop has a chance to lay out the table
-    QtCore.QTimer.singleShot(0, update_height)
+    def enter_table_view(self, table_name: str):
+        self._view_model.set_data_viewer_table(table_name)
+        self._view_model.set_nav_destination(Screen.DATA_TABLE)

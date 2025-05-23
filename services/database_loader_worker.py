@@ -15,7 +15,7 @@ class DatabaseLoaderWorker(QObject):
     def run(self):
         """Load the database using a separate thread."""
         try:
-            self.progress.emit("Loading database...")
+            self.progress.emit("Loading database into memory...")
             success = self.database_service.load_from_database(self.connection_details)
             self.progress.emit("Database loaded successfully.")
             self.finished.emit(success)
