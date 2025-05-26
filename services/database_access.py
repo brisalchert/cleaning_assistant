@@ -32,6 +32,6 @@ class DatabaseAccess(ABC):
         pass
 
     @abstractmethod
-    def _load_table_file(self, file_path: str) -> DataFrame:
+    def _load_table_file(self, file_path: str, csv_config: dict) -> DataFrame:
         """Abstract method for getting a database table as a DataFrame from a CSV file"""
         pass

@@ -8,16 +8,17 @@ class FileLoaderWorker(QObject):
     error = pyqtSignal(str)
     progress = pyqtSignal(str)
 
-    def __init__(self, database_service: DatabaseService, file_list: list[str]):
+    def __init__(self, database_service: DatabaseService, file_list: list[str], csv_config: dict):
         super().__init__()
         self.database_service = database_service
         self.file_list = file_list
+        self.csv_config = csv_config
 
     def run(self):
         """Load the database from the file list using a separate thread."""
         try:
             self.progress.emit("Loading database into memory...")
-            success = self.database_service.load_from_files(self.file_list)
+            success = self.database_service.load_from_files(self.file_list, self.csv_config)
             self.progress.emit("Database loaded successfully.")
             self.finished.emit(success)
         except Exception as e:

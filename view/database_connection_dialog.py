@@ -1,7 +1,7 @@
 from PyQt6 import QtCore
 from PyQt6.QtGui import QStandardItemModel, QStandardItem
 from PyQt6.QtWidgets import QDialog, QFormLayout, QLineEdit, QDialogButtonBox, QVBoxLayout, QCheckBox, QLabel, \
-    QTabWidget, QFileDialog, QListView, QPushButton, QWidget, QHBoxLayout, QAbstractItemView
+    QTabWidget, QFileDialog, QListView, QPushButton, QWidget, QHBoxLayout, QAbstractItemView, QComboBox
 
 
 def get_database_files():
@@ -75,6 +75,28 @@ class DatabaseConnectionDialog(QDialog):
 
         # --- Load from File ---
 
+        # Options for reading CSV files
+        self.file_options_layout = QFormLayout()
+
+        self.delimiter_input = QComboBox()
+        self.delimiter_input.addItems(["Comma", "Tab", "Space"])
+        self.file_options_layout.addRow("Delimiter", self.delimiter_input)
+
+        self.escape_character_input = QLineEdit()
+        self.escape_character_input.setText("\\")
+        self.file_options_layout.addRow("Escape Character", self.escape_character_input)
+
+        self.quote_character_input = QLineEdit()
+        self.quote_character_input.setText("\"")
+        self.file_options_layout.addRow("Quote Character", self.quote_character_input)
+
+        self.double_quote_checkbox = QCheckBox()
+        self.double_quote_checkbox.setChecked(True)
+        self.double_quote_label = QLabel("Allows interpreting \"\" as an escaped \" character.")
+        self.file_options_layout.addRow("Double Quote", self.double_quote_checkbox)
+        self.file_options_layout.addRow(self.double_quote_label)
+
+        # File selection
         file_widget = QWidget(self)
         file_layout = QVBoxLayout()
         self.file_label = QLabel("Files selected:")
@@ -92,6 +114,7 @@ class DatabaseConnectionDialog(QDialog):
         self.file_select_button.clicked.connect(self.open_files_dialog)
         self.file_remove_button.clicked.connect(self.on_remove_clicked)
 
+        file_layout.addLayout(self.file_options_layout)
         file_layout.addWidget(self.file_label)
         file_layout.addWidget(self.file_list)
         file_layout.addLayout(self.file_button_io_row)
@@ -120,6 +143,20 @@ class DatabaseConnectionDialog(QDialog):
             "password": self.password_input.text(),
             "port": self.port_input.text(),
             "save": self.save_parameters_checkbox.isChecked()
+        }
+
+    def get_csv_config(self):
+        delimiter_dict = {
+            "Comma": ",",
+            "Tab": "\t",
+            "Space": " "
+        }
+
+        return {
+            "sep": delimiter_dict[self.delimiter_input.currentText()],
+            "escapechar": self.escape_character_input.text(),
+            "quotechar": self.quote_character_input.text(),
+            "doublequote": self.double_quote_checkbox.isChecked()
         }
 
     def open_files_dialog(self):

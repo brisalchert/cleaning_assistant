@@ -72,9 +72,17 @@ class DatabaseService(AbstractService, DatabaseAccess, ModelEditor):
 
         return table_names_dict
 
-    def _load_table_file(self, file_path: str) -> DataFrame:
+    def _load_table_file(self, file_path: str, csv_config: dict) -> DataFrame:
         with open(file_path, "r", errors="ignore") as file:
-            df = pandas.read_csv(file, escapechar="\\")
+            df = pandas.read_csv(
+                file,
+                sep=csv_config["sep"],
+                escapechar=csv_config["escapechar"],
+                quotechar=csv_config["quotechar"],
+                doublequote=csv_config["doublequote"],
+                engine="python",
+                on_bad_lines="skip"
+            )
 
         return df
 
@@ -104,17 +112,13 @@ class DatabaseService(AbstractService, DatabaseAccess, ModelEditor):
 
         return True
 
-    def load_from_files(self, file_list: list[str]) -> bool:
+    def load_from_files(self, file_list: list[str], csv_config: dict) -> bool:
         tables = {}
 
-        try:
-            for file in file_list:
-                tables[os.path.basename(file)] = self._load_table_file(file)
-                self._data_files.append(file)
-            self._model.set_database(tables)
-        except Exception as e:
-            print(f"Database Service Error: {str(e)}")
-            return False
+        for file in file_list:
+            tables[os.path.basename(file)] = self._load_table_file(file, csv_config)
+            self._data_files.append(file)
+        self._model.set_database(tables)
 
         return True
 

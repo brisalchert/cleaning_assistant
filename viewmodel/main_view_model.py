@@ -44,11 +44,11 @@ class MainViewModel(ViewModel):
         }
 
         self.worker = DatabaseLoaderWorker(self.database_service, self.connection_details)
-        self.start_worker(self.connection_details, self.on_database_loading_finished)
+        self.start_worker(self.on_database_loading_finished)
 
-    def load_files(self, file_list: list[str]):
-        self.worker = FileLoaderWorker(self.database_service, file_list)
-        self.start_worker(file_list, self.on_file_loading_finished)
+    def load_files(self, file_list: list[str], csv_config: dict):
+        self.worker = FileLoaderWorker(self.database_service, file_list, csv_config)
+        self.start_worker(self.on_file_loading_finished)
 
     def set_save_credentials(self, save_credentials: bool):
         self.save_connection_parameters = save_credentials
@@ -84,7 +84,7 @@ class MainViewModel(ViewModel):
             self._database_loaded = False
             self.database_loaded_changed.emit(False)
 
-    def start_worker(self, worker_params, on_finished):
+    def start_worker(self, on_finished):
         self.worker_thread = QThread()
         self.worker.moveToThread(self.worker_thread)
 

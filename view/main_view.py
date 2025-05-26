@@ -294,8 +294,9 @@ class MainView(AbstractView):
             if DatabaseConnectionDialog.using_files:
                 # Get file list Signal view model
                 file_list = get_database_files()
+                csv_config = dialog.get_csv_config()
                 self.show_progress_message_box()
-                self._view_model.load_files(file_list)
+                self._view_model.load_files(file_list, csv_config)
             else:
                 # Get connection details and signal view model
                 connection_details = dialog.get_connection_details()
