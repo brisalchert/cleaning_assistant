@@ -1,13 +1,19 @@
-import io
 from abc import ABC, abstractmethod
+
 from pandas import DataFrame
 
 
 class DatabaseAccess(ABC):
     @property
     @abstractmethod
-    def data_file(self) -> io.TextIOWrapper:
-        """Abstract attribute for data file"""
+    def data_files(self):
+        """Abstract attribute for data files"""
+        pass
+
+    @data_files.setter
+    @abstractmethod
+    def data_files(self, data):
+        """Abstract setter for data files"""
         pass
 
     @abstractmethod
@@ -21,16 +27,11 @@ class DatabaseAccess(ABC):
         pass
 
     @abstractmethod
-    def _set_file(self, file_path: str):
-        """Abstract method for setting the file path for the CSV file to be cleaned"""
-        pass
-
-    @abstractmethod
-    def _close_file(self):
-        """Abstract method for closing the CSV file"""
-        pass
-
-    @abstractmethod
-    def _load_tables(self) -> dict[str, DataFrame]:
+    def _load_tables_database(self) -> dict[str, DataFrame]:
         """Abstract method for getting a list of database tables as DataFrames"""
+        pass
+
+    @abstractmethod
+    def _load_table_file(self, file_path: str) -> DataFrame:
+        """Abstract method for getting a database table as a DataFrame from a CSV file"""
         pass

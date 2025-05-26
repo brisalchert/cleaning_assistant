@@ -1,7 +1,8 @@
 from PyQt6.QtCore import pyqtSignal, QThread
+
 from navigation import Screen
 from services import DatabaseService, DataEditorService, DatabaseLoaderWorker
-from utils import generate_and_store_key
+from services.file_loader_worker import FileLoaderWorker
 from utils.security import save_encrypted_db_credentials, load_key, delete_saved_db_credentials
 from viewmodel import ViewModel
 
@@ -42,27 +43,12 @@ class MainViewModel(ViewModel):
             "port": port
         }
 
-        # Create worker and worker thread
-        self.worker_thread = QThread()
         self.worker = DatabaseLoaderWorker(self.database_service, self.connection_details)
-        self.worker.moveToThread(self.worker_thread)
+        self.start_worker(self.connection_details, self.on_database_loading_finished)
 
-        # Connect signals and slots
-        self.worker.finished.connect(self.on_database_loading_finished)
-        self.worker.error.connect(self.database_loading_error.emit)
-        self.worker.progress.connect(self.database_loading_progress.emit)
-
-        # Thread cleanup
-        self.worker.finished.connect(self.worker_thread.quit)
-        self.worker_thread.finished.connect(self.worker.deleteLater)
-        self.worker_thread.finished.connect(self.worker_thread.deleteLater)
-
-        # Connect thread start to worker task
-        self.worker_thread.started.connect(self.worker.run)
-
-        # Start worker thread
-        self._database_loaded = False
-        self.worker_thread.start()
+    def load_files(self, file_list: list[str]):
+        self.worker = FileLoaderWorker(self.database_service, file_list)
+        self.start_worker(file_list, self.on_file_loading_finished)
 
     def set_save_credentials(self, save_credentials: bool):
         self.save_connection_parameters = save_credentials
@@ -88,13 +74,36 @@ class MainViewModel(ViewModel):
         # Remove connection details from view model
         self.connection_details = None
 
-    def load_file(self, file_path: str):
-        self.database_service.load_from_file(file_path)
+    def on_file_loading_finished(self, success: bool):
+        if success:
+            self._data = self.database_service.get_tables()
+            self._database_loaded = True
+            self.data_changed.emit(self._data)
+            self.database_loaded_changed.emit(self._database_loaded)
+        else:
+            self._database_loaded = False
+            self.database_loaded_changed.emit(False)
 
-        self._data = self.database_service.get_tables()
-        self._database_loaded = True
-        self.data_changed.emit(self._data)
-        self.database_loaded_changed.emit(self._database_loaded)
+    def start_worker(self, worker_params, on_finished):
+        self.worker_thread = QThread()
+        self.worker.moveToThread(self.worker_thread)
+
+        # Connect signals and slots
+        self.worker.finished.connect(on_finished)
+        self.worker.error.connect(self.database_loading_error.emit)
+        self.worker.progress.connect(self.database_loading_progress.emit)
+
+        # Thread cleanup
+        self.worker.finished.connect(self.worker_thread.quit)
+        self.worker_thread.finished.connect(self.worker.deleteLater)
+        self.worker.finished.connect(self.worker_thread.deleteLater)
+
+        # Connect thread start to worker task
+        self.worker_thread.started.connect(self.worker.run)
+
+        # Start worker thread
+        self._database_loaded = False
+        self.worker_thread.start()
 
     def reset_data(self):
         self.database_service.reset_data()

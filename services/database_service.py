@@ -1,7 +1,10 @@
-import io
+import os
+
+import pandas
 import pandas as pd
 from pandas import DataFrame, Series
 from sqlalchemy import create_engine, text, URL
+
 from model import DataModel
 from services import AbstractService
 from services import DatabaseAccess
@@ -10,8 +13,8 @@ from services import ModelEditor
 
 class DatabaseService(AbstractService, DatabaseAccess, ModelEditor):
     @property
-    def data_file(self) -> io.TextIOWrapper:
-        return self._data_file
+    def data_files(self) -> list[str]:
+        return self._data_files
 
     @property
     def model(self) -> DataModel:
@@ -21,7 +24,7 @@ class DatabaseService(AbstractService, DatabaseAccess, ModelEditor):
         self.engine = None
         self._model = model
         self._db_connection_details: dict = {}
-        self._data_file = None
+        self._data_files = []
 
     # --- DatabaseAccess overrides ---
 
@@ -46,13 +49,7 @@ class DatabaseService(AbstractService, DatabaseAccess, ModelEditor):
             database=db_config["db_name"]
         ))
 
-    def _set_file(self, file_path: str):
-        self._data_file = open(file_path, "r")
-
-    def _close_file(self):
-        self._data_file.close()
-
-    def _load_tables(self, schema: str = "public") -> dict[str, DataFrame]:
+    def _load_tables_database(self, schema: str = "public") -> dict[str, DataFrame]:
         # Dictionary for table names
         table_names_dict = {}
 
@@ -75,6 +72,12 @@ class DatabaseService(AbstractService, DatabaseAccess, ModelEditor):
 
         return table_names_dict
 
+    def _load_table_file(self, file_path: str) -> DataFrame:
+        with open(file_path, "r", errors="ignore") as file:
+            df = pandas.read_csv(file, escapechar="\\")
+
+        return df
+
     # --- ModelEditor overrides ---
 
     def create_row(self, table_name: str, columns: dict) -> bool:
@@ -96,14 +99,24 @@ class DatabaseService(AbstractService, DatabaseAccess, ModelEditor):
         self._set_connection_details(**connection_details)
         self._set_engine()
 
-        tables = self._load_tables()
+        tables = self._load_tables_database()
         self._model.set_database(tables)
 
         return True
 
-    def load_from_file(self, filepath: str) -> bool:
-        # TODO: Implement load_from_file
-        pass
+    def load_from_files(self, file_list: list[str]) -> bool:
+        tables = {}
+
+        try:
+            for file in file_list:
+                tables[os.path.basename(file)] = self._load_table_file(file)
+                self._data_files.append(file)
+            self._model.set_database(tables)
+        except Exception as e:
+            print(f"Database Service Error: {str(e)}")
+            return False
+
+        return True
 
     def get_tables(self) -> dict[str, DataFrame]:
         # TODO: Check access (do not allow view to edit model directly, may need to pass a copy)

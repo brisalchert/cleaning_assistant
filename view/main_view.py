@@ -1,16 +1,18 @@
 from functools import partial
+
 from PyQt6 import QtCore
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import QTableView, QVBoxLayout, QWidget, QScrollArea, QLabel, QSizePolicy, QSplitter, \
     QPushButton, QHBoxLayout, QDialog, QMessageBox
 from pandas import DataFrame
+
 from model import DataFrameModel
 from navigation import NavigationController, Screen
 from utils import resize_table_view, load_key, generate_and_store_key
 from utils.security import load_encrypted_db_credentials
 from view import AbstractView
-from view.database_connection_dialog import DatabaseConnectionDialog
+from view.database_connection_dialog import DatabaseConnectionDialog, get_database_files
 from viewmodel import MainViewModel
 
 
@@ -289,12 +291,18 @@ class MainView(AbstractView):
         result = dialog.exec()
 
         if result == QDialog.DialogCode.Accepted:
-            # Get connection details and signal view model
-            connection_details = dialog.get_connection_details()
-            self.show_progress_message_box()
-            save_credentials = connection_details.pop("save")
-            self._view_model.set_save_credentials(save_credentials)
-            self._view_model.load_database(**connection_details)
+            if DatabaseConnectionDialog.using_files:
+                # Get file list Signal view model
+                file_list = get_database_files()
+                self.show_progress_message_box()
+                self._view_model.load_files(file_list)
+            else:
+                # Get connection details and signal view model
+                connection_details = dialog.get_connection_details()
+                self.show_progress_message_box()
+                save_credentials = connection_details.pop("save")
+                self._view_model.set_save_credentials(save_credentials)
+                self._view_model.load_database(**connection_details)
 
     def show_progress_message_box(self):
         """Show a message box for database loading progress."""
