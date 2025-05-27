@@ -3,7 +3,7 @@ from PyQt6 import QtCore, QtGui
 from PyQt6.QtCore import QModelIndex
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import QVBoxLayout, QWidget, QSizePolicy, QLabel, QComboBox, QHBoxLayout, QTableView, QScrollArea, \
-    QSplitter, QTextEdit, QPushButton, QLineEdit, QDial, QDialog, QMessageBox
+    QSplitter, QTextEdit, QPushButton, QLineEdit, QDialog, QMessageBox
 from pandas import DataFrame
 
 from model import DataFrameModel
@@ -36,6 +36,7 @@ class DataTableView(AbstractView):
         self.table: DataFrame = pd.DataFrame()
         self.table_page: DataFrame = pd.DataFrame()
         self.table_view = None
+        self.table_model = None
 
         self.page: int = 1
         self.page_size: int = 50
@@ -176,7 +177,7 @@ class DataTableView(AbstractView):
         if layout.count():
             widget = layout.takeAt(0).widget()
             if widget:
-                widget.setParent(None)
+                widget.deleteLater()
 
         # Add the QTableView for the DataFrame
         self.table_view = QTableView()
@@ -254,9 +255,11 @@ class DataTableView(AbstractView):
 
     def update_table_page(self):
         self.table_page = self.get_page_dataframe()
-        model = DataFrameModel(self.table_page)
-        model.dataChanged.connect(self.handle_data_changed)
-        self.table_view.setModel(model)
+        self.table_model = DataFrameModel(self.table_page)
+        self.table_model.update_editing(self.editing)
+        self.table_model.dataChanged.connect(self.handle_data_changed)
+        self.table_view.setModel(None) # Detach old model
+        self.table_view.setModel(self.table_model)
 
     def update_page(self, page: int):
         if page != self.page:
@@ -318,7 +321,8 @@ class DataTableView(AbstractView):
 
     def handle_data_changed(self, top_left: QModelIndex, bottom_right: QModelIndex):
         row = top_left.row()
-        self._view_model.update_row(self.table.index[row], self.table.iloc[row].to_dict())
+        new_row_df = self.table_view.model().get_dataframe().iloc[[row]]
+        self._view_model.update_row(row, new_row_df)
 
     def sort_results(self, by: str, ascending: bool):
         # Sort the table and update the view

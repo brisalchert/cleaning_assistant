@@ -35,18 +35,16 @@ class DataModel:
         # Read the row from the database, or return an empty Series if not found
         return self.database[table_name].get(primary_key, pd.Series())
 
-    def update_row(self, table_name: str, primary_key: str, columns: dict) -> bool:
+    def update_row(self, table_name: str, row: int, new_row_df: DataFrame) -> bool:
         # Check for the table in the database
         if table_name not in self.database:
             return False
 
         # Update the row in the database, or return False if not found
-        new_row = pd.DataFrame(columns, index=[primary_key])
-
-        if not new_row.index.difference(self.database[table_name].index).empty:
+        if not new_row_df.index.difference(self.database[table_name].index).empty:
             return False
         else:
-            self.database[table_name].update(new_row)
+            self.database[table_name].update(new_row_df)
             return True
 
     def delete_row(self, table_name: str, primary_key: str) -> Series:

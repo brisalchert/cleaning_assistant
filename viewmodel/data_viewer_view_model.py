@@ -1,6 +1,7 @@
 from PyQt6.QtCore import pyqtSignal
 from pandas import DataFrame
 from pandasql import PandaSQLException
+
 from navigation import Screen
 from services import DataEditorService, QueryService
 from viewmodel import ViewModel
@@ -33,16 +34,16 @@ class DataViewerViewModel(ViewModel):
         self.data_editor_service.set_table(table_name)
         self._table_name = table_name
         self._data = self.data_editor_service.get_current_table()
-        self.data_changed.emit({"table_name": self._table_name, "data": self._data})
+        self.data_changed.emit({"table_name": self._table_name, "data": self._data.copy(deep=True)})
 
     def toggle_editing(self):
         self._is_editing = not self._is_editing
         self.is_editing_changed.emit(self._is_editing)
 
-    def update_row(self, primary_key: str, columns: dict):
-        self.data_editor_service.update_row(self._table_name, primary_key, columns)
+    def update_row(self, row: int, new_row_df: DataFrame):
+        self.data_editor_service.update_row(self._table_name, row, new_row_df)
         self._data = self.data_editor_service.get_current_table()
-        self.data_changed.emit({"table_name": self._table_name, "data": self._data})
+        self.data_changed.emit({"table_name": self._table_name, "data": self._data.copy(deep=True)})
 
     def set_query_result(self, query_result: DataFrame):
         self._query_result = query_result
@@ -63,6 +64,10 @@ class DataViewerViewModel(ViewModel):
 
     def undo_change(self):
         self.data_editor_service.undo_change()
+        self._data = self.data_editor_service.get_current_table()
+        self.data_changed.emit({"table_name": self._table_name, "data": self._data.copy(deep=True)})
 
     def redo_change(self):
         self.data_editor_service.redo_change()
+        self._data = self.data_editor_service.get_current_table()
+        self.data_changed.emit({"table_name": self._table_name, "data": self._data.copy(deep=True)})
