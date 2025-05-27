@@ -10,7 +10,17 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Data Cleaning Assistant")
-        self.setGeometry(100, 100, 1200, 800)
+        self.resize(1200, 800)
+
+        # Center on screen
+        screen = QApplication.primaryScreen()
+        screen_geometry = screen.availableGeometry()
+        window_geometry = self.frameGeometry()
+        center_point = screen_geometry.center()
+        window_geometry.moveCenter(center_point)
+        self.move(window_geometry.topLeft())
+
+        # Set up screen stack
         self.stack = QStackedWidget()
         self.setCentralWidget(self.stack)
 

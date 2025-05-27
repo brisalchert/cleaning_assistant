@@ -1,5 +1,6 @@
 from PyQt6.QtCore import pyqtSignal
 from pandas import DataFrame
+from pandasql import PandaSQLException
 from navigation import Screen
 from services import DataEditorService, QueryService
 from viewmodel import ViewModel
@@ -11,6 +12,7 @@ class DataViewerViewModel(ViewModel):
     data_changed = pyqtSignal(dict)
     is_editing_changed = pyqtSignal(bool)
     query_result_changed = pyqtSignal(DataFrame)
+    query_error_changed = pyqtSignal(str)
 
     def __init__(self, data_editor_service: DataEditorService, query_service: QueryService):
         super().__init__()
@@ -45,3 +47,16 @@ class DataViewerViewModel(ViewModel):
     def set_query_result(self, query_result: DataFrame):
         self._query_result = query_result
         self.query_result_changed.emit(query_result)
+
+    def execute_query(self, query: str):
+        self.query_service.set_query(query)
+        result = None
+
+        try:
+            result = self.query_service.execute_query()
+        except PandaSQLException as e:
+            print(f"PandaSQL Error: {str(e)}")
+            self.query_error_changed.emit(str(e))
+
+        if result is not None:
+            self.set_query_result(result)

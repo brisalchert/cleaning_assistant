@@ -2,7 +2,7 @@ import pandas as pd
 from PyQt6 import QtCore, QtGui
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import QVBoxLayout, QWidget, QSizePolicy, QLabel, QComboBox, QHBoxLayout, QTableView, QScrollArea, \
-    QSplitter, QTextEdit, QPushButton, QLineEdit
+    QSplitter, QTextEdit, QPushButton, QLineEdit, QDial, QDialog, QMessageBox
 from pandas import DataFrame
 
 from model import DataFrameModel
@@ -98,6 +98,7 @@ class DataTableView(AbstractView):
         self.query_window.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
         self.query_text_edit = QTextEdit()
         self.execute_button = QPushButton("Execute Query")
+        self.execute_button.clicked.connect(lambda: self._view_model.execute_query(self.query_text_edit.toPlainText()))
         self.query_window.layout().addWidget(self.query_text_edit)
         self.query_window.layout().addWidget(self.execute_button)
 
@@ -140,6 +141,7 @@ class DataTableView(AbstractView):
         self._view_model.data_changed.connect(self.populate_stats)
         self._view_model.is_editing_changed.connect(self.update_editing)
         self._view_model.query_result_changed.connect(self.update_query_result)
+        self._view_model.query_error_changed.connect(self.show_query_error_message)
 
     @QtCore.pyqtSlot(dict)
     def update_table(self, table: dict):
@@ -258,6 +260,26 @@ class DataTableView(AbstractView):
 
     def update_query_result(self, query_result: DataFrame):
         self.query_result = query_result
+        self.show_query_result_dialog()
+
+    def show_query_result_dialog(self):
+        result_dialog = QDialog()
+        result_dialog.setWindowTitle("Query Result")
+        result_dialog.setLayout(QVBoxLayout())
+        result_dialog.setFixedSize(1000, 600)
+        result_dialog_table_view = QTableView()
+        result_dialog_model = DataFrameModel(self.query_result)
+        result_dialog_table_view.setModel(result_dialog_model)
+        result_dialog.layout().addWidget(result_dialog_table_view)
+        result_dialog.exec()
+
+    def show_query_error_message(self, error: str):
+        error_dialog = QMessageBox()
+        error_dialog.setWindowTitle("Query Error")
+        error_dialog.setText("There was an error executing your query.")
+        error_dialog.setInformativeText(error)
+        error_dialog.setIcon(QMessageBox.Icon.Warning)
+        error_dialog.exec()
 
     def sort_results(self, by: str, ascending: bool):
         # Sort the table and update the view

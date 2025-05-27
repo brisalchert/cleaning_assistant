@@ -1,4 +1,5 @@
 from pandas import DataFrame
+from pandasql import sqldf
 from model import DataModel
 from services import AbstractService
 
@@ -25,8 +26,7 @@ class QueryService(AbstractService):
         self._query = query
 
     def execute_query(self) -> DataFrame:
-        # TODO: Implement execute_query
-        pass
+        return sqldf(self._query, env=self._model.database)
 
     def get_last_result(self) -> DataFrame:
         return self._last_query_result
