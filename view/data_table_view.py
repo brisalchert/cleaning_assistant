@@ -281,8 +281,8 @@ class DataTableView(AbstractView):
         self.page_number.setValidator(QtGui.QIntValidator(1, len(self.table) // self.page_size + 1))
         self.page_limit.setText(f"/ {len(self.table) // self.page_size + 1}")
 
-        # Reset to first page
-        self.update_page(1)
+        # Reset page
+        self.update_page(self.page)
 
     def update_editing(self, editing: bool):
         self.editing = editing
@@ -322,7 +322,11 @@ class DataTableView(AbstractView):
     def handle_data_changed(self, top_left: QModelIndex, bottom_right: QModelIndex):
         row = top_left.row()
         new_row_df = self.table_view.model().get_dataframe().iloc[[row]]
-        self._view_model.update_row(row, new_row_df)
+
+        # Adjust row for page number
+        row_adjusted = row + (self.page - 1) * self.page_size
+
+        self._view_model.update_row(row_adjusted, new_row_df)
 
     def sort_results(self, by: str, ascending: bool):
         # Sort the table and update the view
