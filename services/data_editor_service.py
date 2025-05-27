@@ -97,3 +97,15 @@ class DataEditorService(AbstractService, ModelEditor):
     def export_data(self):
         # TODO: Define export_data
         pass
+
+    def get_undo_available(self) -> bool:
+        if self.undo_stack:
+            return True
+        else:
+            return False
+
+    def get_redo_available(self) -> bool:
+        if self.redo_stack:
+            return True
+        else:
+            return False

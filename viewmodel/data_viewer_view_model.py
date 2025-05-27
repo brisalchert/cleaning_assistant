@@ -14,6 +14,8 @@ class DataViewerViewModel(ViewModel):
     is_editing_changed: pyqtSignal = pyqtSignal(bool)
     query_result_changed: pyqtSignal = pyqtSignal(DataFrame)
     query_error_changed: pyqtSignal = pyqtSignal(str)
+    undo_available_changed: pyqtSignal = pyqtSignal(bool)
+    redo_available_changed: pyqtSignal = pyqtSignal(bool)
 
     def __init__(self, data_editor_service: DataEditorService, query_service: QueryService):
         super().__init__()
@@ -40,10 +42,15 @@ class DataViewerViewModel(ViewModel):
         self._is_editing = not self._is_editing
         self.is_editing_changed.emit(self._is_editing)
 
+    def emit_update_signals(self):
+        self.data_changed.emit({"table_name": self._table_name, "data": self._data.copy(deep=True)})
+        self.undo_available_changed.emit(self.data_editor_service.get_undo_available())
+        self.redo_available_changed.emit(self.data_editor_service.get_redo_available())
+
     def update_row(self, row: int, new_row_df: DataFrame):
         self.data_editor_service.update_row(self._table_name, row, new_row_df)
         self._data = self.data_editor_service.get_current_table()
-        self.data_changed.emit({"table_name": self._table_name, "data": self._data.copy(deep=True)})
+        self.emit_update_signals()
 
     def set_query_result(self, query_result: DataFrame):
         self._query_result = query_result
@@ -65,9 +72,9 @@ class DataViewerViewModel(ViewModel):
     def undo_change(self):
         self.data_editor_service.undo_change()
         self._data = self.data_editor_service.get_current_table()
-        self.data_changed.emit({"table_name": self._table_name, "data": self._data.copy(deep=True)})
+        self.emit_update_signals()
 
     def redo_change(self):
         self.data_editor_service.redo_change()
         self._data = self.data_editor_service.get_current_table()
-        self.data_changed.emit({"table_name": self._table_name, "data": self._data.copy(deep=True)})
+        self.emit_update_signals()

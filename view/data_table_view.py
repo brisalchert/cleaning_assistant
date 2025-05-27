@@ -1,17 +1,23 @@
 import pandas as pd
 from PyQt6 import QtCore, QtGui
-from PyQt6.QtCore import QModelIndex
+from PyQt6.QtCore import QModelIndex, QSize, QTimer, Qt
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import QVBoxLayout, QWidget, QSizePolicy, QLabel, QComboBox, QHBoxLayout, QTableView, QScrollArea, \
     QSplitter, QTextEdit, QPushButton, QLineEdit, QDialog, QMessageBox
 from pandas import DataFrame
-
 from model import DataFrameModel
 from navigation import NavigationController
 from utils import resize_table_view
+from utils.transformations import load_flipped_inverted_icon
 from view import AbstractView
 from viewmodel import DataViewerViewModel
 
+
+def update_button_enabled(button: QPushButton, enabled: bool):
+    button.clearFocus()
+    button.setAttribute(Qt.WidgetAttribute.WA_UnderMouse, False)
+    button.update()
+    QTimer.singleShot(0, lambda: button.setEnabled(enabled))
 
 class DataTableView(AbstractView):
     @property
@@ -37,6 +43,8 @@ class DataTableView(AbstractView):
         self.table_page: DataFrame = pd.DataFrame()
         self.table_view = None
         self.table_model = None
+        self.table_filtered: DataFrame = pd.DataFrame()
+        self.filtered = False
 
         self.page: int = 1
         self.page_size: int = 50
@@ -62,17 +70,22 @@ class DataTableView(AbstractView):
         self.button_row = QHBoxLayout()
         self.button_row.addWidget(self.table_name_label)
 
-        self.prev_page_button = QPushButton("Previous Page")
+        self.prev_page_button = QPushButton()
+        icon = load_flipped_inverted_icon("assets/arrow.png", flip_horizontal=True, invert=True)
+        self.prev_page_button.setIcon(icon)
+        self.prev_page_button.setIconSize(QSize(24, 24))
         self.prev_page_button.clicked.connect(self.on_prev_page_button_clicked)
 
-        self.page_label = QLabel(f"Page: ")
         self.page_number = QLineEdit("1")
         self.page_number.setFixedWidth(100)
         self.page_number.setAlignment(QtCore.Qt.AlignmentFlag.AlignRight)
         self.page_number.returnPressed.connect(lambda: self.update_page(int(self.page_number.text())))
-        self.page_limit = QLabel("/ 1")
+        self.page_limit = QLabel("/1")
 
-        self.next_page_button = QPushButton("Next Page")
+        self.next_page_button = QPushButton()
+        icon = load_flipped_inverted_icon("assets/arrow.png", invert=True)
+        self.next_page_button.setIcon(icon)
+        self.next_page_button.setIconSize(QSize(24, 24))
         self.next_page_button.clicked.connect(self.on_next_page_button_clicked)
 
         self.edit_toggle_button = QPushButton("Enter Edit Mode")
@@ -80,13 +93,14 @@ class DataTableView(AbstractView):
         self.edit_toggle_button.clicked.connect(lambda: self._view_model.toggle_editing())
 
         self.undo_button = QPushButton("Undo")
+        self.undo_button.setEnabled(False)
         self.undo_button.clicked.connect(self._view_model.undo_change)
         self.redo_button = QPushButton("Redo")
+        self.redo_button.setEnabled(False)
         self.redo_button.clicked.connect(self._view_model.redo_change)
 
         for widget in [
             self.prev_page_button,
-            self.page_label,
             self.page_number,
             self.page_limit,
             self.next_page_button,
@@ -100,13 +114,26 @@ class DataTableView(AbstractView):
 
         self.button_row.addStretch()
 
+        self.sort_box = QVBoxLayout()
+        self.sort_label = QLabel("Sort by:")
         self.sort_dropdown = QComboBox()
-        self.filter_dropdown = QComboBox()
+        self.sort_dropdown.currentIndexChanged.connect(lambda: self.sort_results(*self.get_sort()))
+        self.sort_box.addWidget(self.sort_label)
+        self.sort_box.addWidget(self.sort_dropdown)
 
-        for widget in [self.sort_dropdown, self.filter_dropdown]:
+        self.filter_box = QVBoxLayout()
+        self.filter_label = QLabel("Filter by:")
+        self.filter_dropdown = QComboBox()
+        self.filter_dropdown.currentIndexChanged.connect(lambda: self.filter_results(*self.get_filter()))
+        self.filter_box.addWidget(self.filter_label)
+        self.filter_box.addWidget(self.filter_dropdown)
+
+        for widget in [self.sort_label, self.sort_dropdown, self.filter_label, self.filter_dropdown]:
             widget.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
-            widget.setFont(QFont(self.font, 14))
-            self.button_row.addWidget(widget)
+            widget.setFont(QFont(self.font, 10))
+
+        self.button_row.addLayout(self.sort_box)
+        self.button_row.addLayout(self.filter_box)
 
         # Set up stats and query section
         self.stats_box = QWidget()
@@ -166,6 +193,8 @@ class DataTableView(AbstractView):
         self._view_model.is_editing_changed.connect(self.update_editing)
         self._view_model.query_result_changed.connect(self.update_query_result)
         self._view_model.query_error_changed.connect(self.show_query_error_message)
+        self._view_model.undo_available_changed.connect(lambda enabled: update_button_enabled(self.undo_button, enabled))
+        self._view_model.redo_available_changed.connect(lambda enabled: update_button_enabled(self.redo_button, enabled))
 
     @QtCore.pyqtSlot(dict)
     def update_table(self, table: dict):
@@ -185,6 +214,24 @@ class DataTableView(AbstractView):
         self.table_view.setSelectionBehavior(QTableView.SelectionBehavior.SelectItems)
         self.update_page_size(self.page_size)
         self.update_table_page()
+
+        # Populate sorting/filtering dropdowns
+        self.sort_dropdown.clear()
+        self.sort_dropdown.addItem("None")
+        self.filter_dropdown.clear()
+        self.filter_dropdown.addItem("None")
+
+        for column in self.table.columns:
+            self.sort_dropdown.addItem(f"{column} (ascending)")
+            self.sort_dropdown.addItem(f"{column} (descending)")
+
+            if self.table[column].dtype == "bool":
+                self.filter_dropdown.addItem(f"{column} (True)")
+                self.filter_dropdown.addItem(f"{column} (False)")
+
+            if self.table[column].dtype == "category":
+                for category in self.table[column].cat.categories:
+                    self.filter_dropdown.addItem(f"{column} ({category})")
 
         # Update table sizing
         resize_table_view(self.table_view)
@@ -249,9 +296,12 @@ class DataTableView(AbstractView):
                 resize_table_view(widget)
 
     def get_page_dataframe(self):
+        # Check for filtering
+        df = self.table_filtered if self.filtered else self.table
+
         start_index = (self.page - 1) * self.page_size
-        end_index = min(self.page * self.page_size, len(self.table))
-        return self.table.iloc[start_index:end_index]
+        end_index = min(self.page * self.page_size, len(df))
+        return df.iloc[start_index:end_index]
 
     def update_table_page(self):
         self.table_page = self.get_page_dataframe()
@@ -262,11 +312,10 @@ class DataTableView(AbstractView):
         self.table_view.setModel(self.table_model)
 
     def update_page(self, page: int):
-        if page != self.page:
-            self.page = page
-            self.page_number.setText(str(self.page))
-            self.update_table_page()
-            self.redraw_table()
+        self.page = page
+        self.page_number.setText(str(self.page))
+        self.update_table_page()
+        self.redraw_table()
 
     def on_prev_page_button_clicked(self):
         if self.page > 1:
@@ -279,7 +328,7 @@ class DataTableView(AbstractView):
     def update_page_size(self, page_size: int):
         self.page_size = page_size
         self.page_number.setValidator(QtGui.QIntValidator(1, len(self.table) // self.page_size + 1))
-        self.page_limit.setText(f"/ {len(self.table) // self.page_size + 1}")
+        self.page_limit.setText(f"/{len(self.table) // self.page_size + 1}")
 
         # Reset page
         self.update_page(self.page)
@@ -329,10 +378,51 @@ class DataTableView(AbstractView):
         self._view_model.update_row(row_adjusted, new_row_df)
 
     def sort_results(self, by: str, ascending: bool):
+        # TODO: Handle warning for filtering and sorting simultaneously
+        df = self.table_filtered if self.filtered else self.table
+
+        if by is None or ascending is None:
+            df.sort_index(ascending=True, inplace=True)
+            self.update_page(1)
+            return
+
         # Sort the table and update the view
-        self.table.sort_values(by, ascending=ascending, inplace=True)
+        df.sort_values(by, ascending=ascending, inplace=True)
         self.update_page(1)
 
+    def get_sort(self):
+        sort = self.sort_dropdown.currentText()
+        if sort == "None" or sort == "":
+            return None, None
+        else:
+            sort = sort.split(" ")
+            sort_by = sort[0]
+            sort_ascending = sort[1] == "(ascending)"
+            return sort_by, sort_ascending
+
     def filter_results(self, by: str, value: str):
-        # TODO: Implement filter_results
-        pass
+        if by is None or value is None:
+            self.filtered = False
+            self.update_page(1)
+            return
+
+        # Parse boolean values
+        if value == "True":
+            value = True
+        elif value == "False":
+            value = False
+
+        # Filter the table and update the view
+        self.table_filtered = self.table[self.table[by] == value]
+        self.filtered = True
+        self.update_page(1)
+
+    def get_filter(self):
+        filter_text = self.filter_dropdown.currentText()
+        if filter_text == "None" or filter_text == "":
+            return None, None
+        else:
+            filter_text = filter_text.split(" ")
+            filter_by = filter_text[0]
+            filter_value = filter_text[1].strip("()")
+            return filter_by, filter_value
