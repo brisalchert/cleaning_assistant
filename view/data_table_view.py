@@ -58,18 +58,32 @@ class DataTableView(AbstractView):
         # Data table screen buttons and menus
         self.button_row = QHBoxLayout()
         self.button_row.addWidget(self.table_name_label)
+
         self.prev_page_button = QPushButton("Previous Page")
         self.prev_page_button.clicked.connect(self.on_prev_page_button_clicked)
+
         self.page_label = QLabel(f"Page: ")
         self.page_number = QLineEdit("1")
         self.page_number.setFixedWidth(100)
         self.page_number.setAlignment(QtCore.Qt.AlignmentFlag.AlignRight)
         self.page_number.returnPressed.connect(lambda: self.update_page(int(self.page_number.text())))
         self.page_limit = QLabel("/ 1")
+
         self.next_page_button = QPushButton("Next Page")
         self.next_page_button.clicked.connect(self.on_next_page_button_clicked)
 
-        for widget in [self.prev_page_button, self.page_label, self.page_number, self.page_limit, self.next_page_button]:
+        self.edit_toggle_button = QPushButton("Enter Edit Mode")
+        self.edit_toggle_button.setCheckable(True)
+        self.edit_toggle_button.clicked.connect(lambda: self._view_model.toggle_editing())
+
+        for widget in [
+            self.prev_page_button,
+            self.page_label,
+            self.page_number,
+            self.page_limit,
+            self.next_page_button,
+            self.edit_toggle_button
+        ]:
             widget.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
             widget.setFont(QFont(self.font, 14))
             self.button_row.addWidget(widget)
@@ -257,6 +271,15 @@ class DataTableView(AbstractView):
 
     def update_editing(self, editing: bool):
         self.editing = editing
+
+        if editing:
+            self.table_view.model().update_editing(True)
+            self.edit_toggle_button.setText("Exit Edit Mode")
+            self.edit_toggle_button.setChecked(True)
+        else:
+            self.table_view.model().update_editing(False)
+            self.edit_toggle_button.setText("Enter Edit Mode")
+            self.edit_toggle_button.setChecked(False)
 
     def update_query_result(self, query_result: DataFrame):
         self.query_result = query_result
