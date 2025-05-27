@@ -4,7 +4,7 @@ from PyQt6 import QtCore
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import QTableView, QVBoxLayout, QWidget, QScrollArea, QLabel, QSizePolicy, QSplitter, \
-    QPushButton, QHBoxLayout, QDialog, QMessageBox
+    QPushButton, QHBoxLayout, QDialog, QMessageBox, QFileDialog
 from pandas import DataFrame
 
 from model import DataFrameModel
@@ -80,10 +80,10 @@ class MainView(AbstractView):
         self.database_label.setFont(QFont(self.font, 24))
 
         # Main screen buttons
-        # TODO: Add remaining button functions
         self.load_button = QPushButton("Load Database")
         self.load_button.clicked.connect(self.show_database_connection_dialog)
         self.export_button = QPushButton("Export")
+        self.export_button.clicked.connect(self.open_export_file_dialog)
 
         self.database_label_row = QHBoxLayout()
         self.database_label_row.addWidget(self.database_label)
@@ -141,6 +141,9 @@ class MainView(AbstractView):
         self._view_model.database_loaded_changed.connect(self.update_display)
         self._view_model.database_loading_progress.connect(self.update_loading_progress)
         self._view_model.database_loading_error.connect(self.show_database_loading_error)
+        self._view_model.exporting_changed.connect(self.export_button.setDisabled)
+        self._view_model.exporting_completion.connect(self.show_export_completion_message)
+        self._view_model.exporting_error.connect(self.show_export_error_message)
 
         # Check for existing database credentials
         generate_and_store_key()  # Does nothing if key already exists
@@ -324,3 +327,24 @@ class MainView(AbstractView):
     def enter_table_view(self, table_name: str):
         self.data_viewer_table_name.emit(table_name)
         self._view_model.set_nav_destination(Screen.DATA_TABLE)
+
+    def open_export_file_dialog(self):
+        export_dialog = QFileDialog()
+        directory = export_dialog.getExistingDirectory(self, "Select Directory", ".", QFileDialog.Option.ShowDirsOnly)
+
+        if directory:
+            self._view_model.export_data(directory)
+
+    def show_export_completion_message(self, message: str):
+        self.progress_message_box = QMessageBox()
+        self.progress_message_box.setWindowTitle("Database Export")
+        self.progress_message_box.setText(message)
+        self.progress_message_box.show()
+
+    def show_export_error_message(self, error: str):
+        self.progress_message_box = QMessageBox()
+        self.progress_message_box.setWindowTitle("Database Export")
+        self.progress_message_box.setText("There was an error exporting the database.")
+        self.progress_message_box.setInformativeText(error)
+        self.progress_message_box.setIcon(QMessageBox.Icon.Warning)
+        self.progress_message_box.show()

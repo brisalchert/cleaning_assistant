@@ -2,6 +2,7 @@ from PyQt6.QtCore import pyqtSignal, QThread
 
 from navigation import Screen
 from services import DatabaseService, DataEditorService, DatabaseLoaderWorker
+from services.database_export_worker import DatabaseExportWorker
 from services.file_loader_worker import FileLoaderWorker
 from utils.security import save_encrypted_db_credentials, load_key, delete_saved_db_credentials
 from viewmodel import ViewModel
@@ -14,6 +15,9 @@ class MainViewModel(ViewModel):
     database_loaded_changed: pyqtSignal = pyqtSignal(bool)
     database_loading_progress: pyqtSignal = pyqtSignal(str)
     database_loading_error: pyqtSignal = pyqtSignal(str)
+    exporting_changed: pyqtSignal = pyqtSignal(bool)
+    exporting_completion: pyqtSignal = pyqtSignal(str)
+    exporting_error: pyqtSignal = pyqtSignal(str)
 
     def __init__(self, database_service: DatabaseService, data_editor_service: DataEditorService):
         super().__init__()
@@ -44,11 +48,13 @@ class MainViewModel(ViewModel):
         }
 
         self.worker = DatabaseLoaderWorker(self.database_service, self.connection_details)
-        self.start_worker(self.on_database_loading_finished)
+        self._database_loaded = False
+        self.start_worker(self.on_database_loading_finished, self.database_loading_error, self.database_loading_progress)
 
     def load_files(self, file_list: list[str], csv_config: dict):
         self.worker = FileLoaderWorker(self.database_service, file_list, csv_config)
-        self.start_worker(self.on_file_loading_finished)
+        self._database_loaded = False
+        self.start_worker(self.on_file_loading_finished, self.database_loading_error, self.database_loading_progress)
 
     def set_save_credentials(self, save_credentials: bool):
         self.save_connection_parameters = save_credentials
@@ -84,14 +90,15 @@ class MainViewModel(ViewModel):
             self._database_loaded = False
             self.database_loaded_changed.emit(False)
 
-    def start_worker(self, on_finished):
+    def start_worker(self, on_finished, error_signal, progress_signal=None):
         self.worker_thread = QThread()
         self.worker.moveToThread(self.worker_thread)
 
         # Connect signals and slots
         self.worker.finished.connect(on_finished)
-        self.worker.error.connect(self.database_loading_error.emit)
-        self.worker.progress.connect(self.database_loading_progress.emit)
+        self.worker.error.connect(error_signal.emit)
+        if progress_signal is not None:
+            self.worker.progress.connect(progress_signal.emit)
 
         # Thread cleanup
         self.worker.finished.connect(self.worker_thread.quit)
@@ -102,8 +109,15 @@ class MainViewModel(ViewModel):
         self.worker_thread.started.connect(self.worker.run)
 
         # Start worker thread
-        self._database_loaded = False
         self.worker_thread.start()
 
-    def export_data(self):
-        self.data_editor_service.export_data()
+    def export_data(self, directory: str):
+        self.worker = DatabaseExportWorker(self.data_editor_service, directory)
+        self.exporting_changed.emit(True)
+        self.start_worker(self.on_exporting_finished, self.exporting_error)
+
+    def on_exporting_finished(self, success: bool):
+        if success:
+            self.exporting_completion.emit("Database exported successfully.")
+
+        self.exporting_changed.emit(False)

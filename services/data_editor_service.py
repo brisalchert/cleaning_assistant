@@ -1,6 +1,6 @@
+from pathlib import Path
 import pandas as pd
 from pandas import Series, DataFrame
-
 from model import DataModel
 from services import AbstractService
 from services import ModelEditor
@@ -94,9 +94,18 @@ class DataEditorService(AbstractService, ModelEditor):
             for diff in diffs:
                 self._model.database[diff["table"]].at[diff["row"], diff["column"]] = diff["new_value"]
 
-    def export_data(self):
-        # TODO: Define export_data
-        pass
+    def export_data(self, directory: str) -> bool:
+        # Create directory for export files
+        path = Path(f"{directory}/cleaning_assistant_export")
+        path.mkdir(parents=True, exist_ok=True)
+
+        for name, df in self._model.database.items():
+            file_name = f"{name}.csv"
+            file_path = Path(f"{path}/{file_name}")
+
+            df.to_csv(file_path, index=False)
+
+        return True
 
     def get_undo_available(self) -> bool:
         if self.undo_stack:
