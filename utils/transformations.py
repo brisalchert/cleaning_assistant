@@ -14,7 +14,7 @@ def resize_table_view(table_view: QTableView):
     # Set column widths
     header = table_view.horizontalHeader()
     header.setDefaultSectionSize(default_column_width)
-    header.setSectionResizeMode(QHeaderView.ResizeMode.Fixed)
+    header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
 
     # Calculate total width needed for all columns
     total_width = default_column_width * table_view.model().columnCount()
