@@ -1,5 +1,6 @@
 import pandas as pd
 from PyQt6 import QtCore, QtGui
+from PyQt6.QtCore import QModelIndex
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import QVBoxLayout, QWidget, QSizePolicy, QLabel, QComboBox, QHBoxLayout, QTableView, QScrollArea, \
     QSplitter, QTextEdit, QPushButton, QLineEdit, QDial, QDialog, QMessageBox
@@ -35,6 +36,7 @@ class DataTableView(AbstractView):
         self.table: DataFrame = pd.DataFrame()
         self.table_page: DataFrame = pd.DataFrame()
         self.table_view = None
+
         self.page: int = 1
         self.page_size: int = 50
         self.editing: bool = False
@@ -76,13 +78,20 @@ class DataTableView(AbstractView):
         self.edit_toggle_button.setCheckable(True)
         self.edit_toggle_button.clicked.connect(lambda: self._view_model.toggle_editing())
 
+        self.undo_button = QPushButton("Undo")
+        self.undo_button.clicked.connect(self._view_model.undo_change)
+        self.redo_button = QPushButton("Redo")
+        self.redo_button.clicked.connect(self._view_model.redo_change)
+
         for widget in [
             self.prev_page_button,
             self.page_label,
             self.page_number,
             self.page_limit,
             self.next_page_button,
-            self.edit_toggle_button
+            self.edit_toggle_button,
+            self.undo_button,
+            self.redo_button
         ]:
             widget.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
             widget.setFont(QFont(self.font, 14))
@@ -171,6 +180,8 @@ class DataTableView(AbstractView):
 
         # Add the QTableView for the DataFrame
         self.table_view = QTableView()
+        self.table_view.setSelectionMode(QTableView.SelectionMode.SingleSelection)
+        self.table_view.setSelectionBehavior(QTableView.SelectionBehavior.SelectItems)
         self.update_page_size(self.page_size)
         self.update_table_page()
 
@@ -244,6 +255,7 @@ class DataTableView(AbstractView):
     def update_table_page(self):
         self.table_page = self.get_page_dataframe()
         model = DataFrameModel(self.table_page)
+        model.dataChanged.connect(self.handle_data_changed)
         self.table_view.setModel(model)
 
     def update_page(self, page: int):
@@ -303,6 +315,10 @@ class DataTableView(AbstractView):
         error_dialog.setInformativeText(error)
         error_dialog.setIcon(QMessageBox.Icon.Warning)
         error_dialog.exec()
+
+    def handle_data_changed(self, top_left: QModelIndex, bottom_right: QModelIndex):
+        row = top_left.row()
+        self._view_model.update_row(self.table.index[row], self.table.iloc[row].to_dict())
 
     def sort_results(self, by: str, ascending: bool):
         # Sort the table and update the view

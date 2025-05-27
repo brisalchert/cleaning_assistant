@@ -81,8 +81,6 @@ class MainView(AbstractView):
 
         # Main screen buttons
         # TODO: Add remaining button functions
-        self.undo_button = QPushButton("Undo")
-        self.redo_button = QPushButton("Redo")
         self.load_button = QPushButton("Load Database")
         self.load_button.clicked.connect(self.show_database_connection_dialog)
         self.export_button = QPushButton("Export")
@@ -91,7 +89,7 @@ class MainView(AbstractView):
         self.database_label_row.addWidget(self.database_label)
         self.database_label_row.addStretch()
 
-        for button in [self.undo_button, self.redo_button, self.load_button, self.export_button]:
+        for button in [self.load_button, self.export_button]:
             button.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
             button.setFont(QFont(self.font, 14))
             self.database_label_row.addWidget(button)

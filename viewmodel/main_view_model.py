@@ -105,14 +105,5 @@ class MainViewModel(ViewModel):
         self._database_loaded = False
         self.worker_thread.start()
 
-    def reset_data(self):
-        self.database_service.reset_data()
-
-    def undo_change(self):
-        self.data_editor_service.undo_change()
-
-    def redo_change(self):
-        self.data_editor_service.redo_change()
-
     def export_data(self):
         self.data_editor_service.export_data()
