@@ -9,11 +9,11 @@ from viewmodel import ViewModel
 
 class DataViewerViewModel(ViewModel):
     # --- Signals for view ---
-    nav_destination_changed = pyqtSignal(Screen)
-    data_changed = pyqtSignal(dict)
-    is_editing_changed = pyqtSignal(bool)
-    query_result_changed = pyqtSignal(DataFrame)
-    query_error_changed = pyqtSignal(str)
+    nav_destination_changed: pyqtSignal = pyqtSignal(Screen)
+    data_changed: pyqtSignal = pyqtSignal(dict)
+    is_editing_changed: pyqtSignal = pyqtSignal(bool)
+    query_result_changed: pyqtSignal = pyqtSignal(DataFrame)
+    query_error_changed: pyqtSignal = pyqtSignal(str)
 
     def __init__(self, data_editor_service: DataEditorService, query_service: QueryService):
         super().__init__()

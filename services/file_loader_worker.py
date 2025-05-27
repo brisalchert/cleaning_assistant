@@ -4,9 +4,9 @@ from services import DatabaseService
 
 
 class FileLoaderWorker(QObject):
-    finished = pyqtSignal(bool)
-    error = pyqtSignal(str)
-    progress = pyqtSignal(str)
+    finished: pyqtSignal = pyqtSignal(bool)
+    error: pyqtSignal = pyqtSignal(str)
+    progress: pyqtSignal = pyqtSignal(str)
 
     def __init__(self, database_service: DatabaseService, file_list: list[str], csv_config: dict):
         super().__init__()

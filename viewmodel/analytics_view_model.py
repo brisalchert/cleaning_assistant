@@ -5,10 +5,10 @@ from viewmodel import ViewModel
 
 
 class AnalyticsViewModel(ViewModel):
-    nav_destination_changed = pyqtSignal(Screen)
-    stats_updated = pyqtSignal(dict)
-    plots_updated = pyqtSignal(dict)
-    suggestions_updated = pyqtSignal(dict)
+    nav_destination_changed: pyqtSignal = pyqtSignal(Screen)
+    stats_updated: pyqtSignal = pyqtSignal(dict)
+    plots_updated: pyqtSignal = pyqtSignal(dict)
+    suggestions_updated: pyqtSignal = pyqtSignal(dict)
 
     def __init__(self, data_cleaning_service: DataCleaningService, analytics_service: AnalyticsService):
         super().__init__()

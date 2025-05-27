@@ -6,13 +6,13 @@ from viewmodel import ViewModel
 
 
 class AutoCleanViewModel(ViewModel):
-    nav_destination_changed = pyqtSignal(Screen)
-    cleaning_config_changed = pyqtSignal(dict)
-    analytics_config_changed = pyqtSignal(dict)
-    cleaning_running_changed = pyqtSignal(bool)
-    progress_updated = pyqtSignal(float)
-    current_step_changed = pyqtSignal(str)
-    cleaning_stats_updated = pyqtSignal(dict)
+    nav_destination_changed: pyqtSignal = pyqtSignal(Screen)
+    cleaning_config_changed: pyqtSignal = pyqtSignal(dict)
+    analytics_config_changed: pyqtSignal = pyqtSignal(dict)
+    cleaning_running_changed: pyqtSignal = pyqtSignal(bool)
+    progress_updated: pyqtSignal = pyqtSignal(float)
+    current_step_changed: pyqtSignal = pyqtSignal(str)
+    cleaning_stats_updated: pyqtSignal = pyqtSignal(dict)
 
     def __init__(self, data_cleaning_service: DataCleaningService, analytics_service: AnalyticsService):
         super().__init__()

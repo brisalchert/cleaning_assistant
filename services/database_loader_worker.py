@@ -3,9 +3,9 @@ from services import DatabaseService
 
 
 class DatabaseLoaderWorker(QObject):
-    finished = pyqtSignal(bool)
-    error = pyqtSignal(str)
-    progress = pyqtSignal(str)
+    finished: pyqtSignal = pyqtSignal(bool)
+    error: pyqtSignal = pyqtSignal(str)
+    progress: pyqtSignal = pyqtSignal(str)
 
     def __init__(self, database_service: DatabaseService, connection_details: dict):
         super().__init__()

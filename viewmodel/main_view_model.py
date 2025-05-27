@@ -9,11 +9,11 @@ from viewmodel import ViewModel
 
 class MainViewModel(ViewModel):
     # --- Signals for view ---
-    nav_destination_changed = pyqtSignal(Screen)
-    data_changed = pyqtSignal(dict)
-    database_loaded_changed = pyqtSignal(bool)
-    database_loading_progress = pyqtSignal(str)
-    database_loading_error = pyqtSignal(str)
+    nav_destination_changed: pyqtSignal = pyqtSignal(Screen)
+    data_changed: pyqtSignal = pyqtSignal(dict)
+    database_loaded_changed: pyqtSignal = pyqtSignal(bool)
+    database_loading_progress: pyqtSignal = pyqtSignal(str)
+    database_loading_error: pyqtSignal = pyqtSignal(str)
 
     def __init__(self, database_service: DatabaseService, data_editor_service: DataEditorService):
         super().__init__()
