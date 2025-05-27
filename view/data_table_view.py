@@ -1,9 +1,10 @@
 import pandas as pd
-from PyQt6 import QtCore
+from PyQt6 import QtCore, QtGui
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import QVBoxLayout, QWidget, QSizePolicy, QLabel, QComboBox, QHBoxLayout, QTableView, QScrollArea, \
-    QSplitter, QTextEdit, QPushButton
+    QSplitter, QTextEdit, QPushButton, QLineEdit
 from pandas import DataFrame
+
 from model import DataFrameModel
 from navigation import NavigationController
 from utils import resize_table_view
@@ -55,12 +56,28 @@ class DataTableView(AbstractView):
         self.table_name_label.setFont(QFont(self.font, 24))
 
         # Data table screen buttons and menus
-        self.sort_dropdown = QComboBox()
-        self.filter_dropdown = QComboBox()
-
         self.button_row = QHBoxLayout()
         self.button_row.addWidget(self.table_name_label)
+        self.prev_page_button = QPushButton("Previous Page")
+        self.prev_page_button.clicked.connect(self.on_prev_page_button_clicked)
+        self.page_label = QLabel(f"Page: ")
+        self.page_number = QLineEdit("1")
+        self.page_number.setFixedWidth(100)
+        self.page_number.setAlignment(QtCore.Qt.AlignmentFlag.AlignRight)
+        self.page_number.returnPressed.connect(lambda: self.update_page(int(self.page_number.text())))
+        self.page_limit = QLabel("/ 1")
+        self.next_page_button = QPushButton("Next Page")
+        self.next_page_button.clicked.connect(self.on_next_page_button_clicked)
+
+        for widget in [self.prev_page_button, self.page_label, self.page_number, self.page_limit, self.next_page_button]:
+            widget.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
+            widget.setFont(QFont(self.font, 14))
+            self.button_row.addWidget(widget)
+
         self.button_row.addStretch()
+
+        self.sort_dropdown = QComboBox()
+        self.filter_dropdown = QComboBox()
 
         for widget in [self.sort_dropdown, self.filter_dropdown]:
             widget.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
@@ -99,7 +116,7 @@ class DataTableView(AbstractView):
         self.horizontal_splitter.setHandleWidth(5)
 
         # Connect splitter changes to table resizing
-        self.horizontal_splitter.splitterMoved.connect(self.on_splitter_moved)
+        self.horizontal_splitter.splitterMoved.connect(self.redraw_table)
 
         # Navigation
         self.setup_navigation()
@@ -138,9 +155,8 @@ class DataTableView(AbstractView):
 
         # Add the QTableView for the DataFrame
         self.table_view = QTableView()
-        self.table_page = self.get_page_dataframe()
-        model = DataFrameModel(self.table_page)
-        self.table_view.setModel(model)
+        self.update_page_size(self.page_size)
+        self.update_table_page()
 
         # Update table sizing
         resize_table_view(self.table_view)
@@ -196,10 +212,10 @@ class DataTableView(AbstractView):
         # Update the container in the view
         self.stats_box.updateGeometry()
 
-    def on_splitter_moved(self):
-        # Resize table views when splitter is moved
-        if self.table:
-            layout = self.table_container.layout()
+    def redraw_table(self):
+        # Resize table views
+        layout = self.table_container.layout()
+        if layout.count():
             widget = layout.itemAt(0).widget()
             if isinstance(widget, QTableView):
                 resize_table_view(widget)
@@ -209,13 +225,30 @@ class DataTableView(AbstractView):
         end_index = min(self.page * self.page_size, len(self.table))
         return self.table.iloc[start_index:end_index]
 
+    def update_table_page(self):
+        self.table_page = self.get_page_dataframe()
+        model = DataFrameModel(self.table_page)
+        self.table_view.setModel(model)
+
     def update_page(self, page: int):
         if page != self.page:
             self.page = page
-            self.update_table(self.table)
+            self.page_number.setText(str(self.page))
+            self.update_table_page()
+            self.redraw_table()
+
+    def on_prev_page_button_clicked(self):
+        if self.page > 1:
+            self.update_page(self.page - 1)
+
+    def on_next_page_button_clicked(self):
+        if self.page * self.page_size < len(self.table):
+            self.update_page(self.page + 1)
 
     def update_page_size(self, page_size: int):
         self.page_size = page_size
+        self.page_number.setValidator(QtGui.QIntValidator(1, len(self.table) // self.page_size + 1))
+        self.page_limit.setText(f"/ {len(self.table) // self.page_size + 1}")
 
         # Reset to first page
         self.update_page(1)
@@ -229,7 +262,7 @@ class DataTableView(AbstractView):
     def sort_results(self, by: str, ascending: bool):
         # Sort the table and update the view
         self.table.sort_values(by, ascending=ascending, inplace=True)
-        self.update_table(self.table)
+        self.update_page(1)
 
     def filter_results(self, by: str, value: str):
         # TODO: Implement filter_results

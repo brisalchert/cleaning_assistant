@@ -115,7 +115,7 @@ class MainView(AbstractView):
         self.splitter.setHandleWidth(5)
 
         # Connect splitter changes to table resizing
-        self.splitter.splitterMoved.connect(self.on_splitter_moved)
+        self.splitter.splitterMoved.connect(self.redraw_tables)
 
         # Navigation
         self.setup_navigation()
@@ -266,25 +266,20 @@ class MainView(AbstractView):
         # Update the container in the view
         self.stats_box.updateGeometry()
 
+    def redraw_tables(self):
+        # Resize table views
+        if self.tables:
+            layout = self.table_container.layout()
+            for i in range(layout.count()):
+                widget = layout.itemAt(i).widget()
+                if isinstance(widget, QTableView):
+                    resize_table_view(widget)
+
     def resizeEvent(self, event):
         super().resizeEvent(event)
 
         # Resize table views when window is resized
-        if self.tables:
-            layout = self.table_container.layout()
-            for i in range(layout.count()):
-                widget = layout.itemAt(i).widget()
-                if isinstance(widget, QTableView):
-                    resize_table_view(widget)
-
-    def on_splitter_moved(self):
-        # Resize table views when splitter is moved
-        if self.tables:
-            layout = self.table_container.layout()
-            for i in range(layout.count()):
-                widget = layout.itemAt(i).widget()
-                if isinstance(widget, QTableView):
-                    resize_table_view(widget)
+        self.redraw_tables()
 
     def show_database_connection_dialog(self):
         dialog = DatabaseConnectionDialog()
