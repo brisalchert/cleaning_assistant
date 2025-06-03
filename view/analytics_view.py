@@ -26,6 +26,9 @@ class AnalyticsView(AbstractView):
         self._view_model.plots_updated.connect(self.update_plots)
         self._view_model.suggestions_updated.connect(self.update_suggestions)
 
+        # Connect navigation controller to UI
+        self._nav_controller.nav_destination_changed.connect(self.update_nav_bar)
+
     def update_stats(self, stats: dict):
         self.stats = stats
 

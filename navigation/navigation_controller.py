@@ -1,8 +1,12 @@
+from PyQt6.QtCore import pyqtSignal, QObject
 from navigation import Screen
 
 
-class NavigationController:
+class NavigationController(QObject):
+    nav_destination_changed: pyqtSignal = pyqtSignal(Screen)
+
     def __init__(self):
+        super().__init__()
         self.window = None
         self.views = None
         self.back_stack: list[Screen] = []
@@ -24,6 +28,7 @@ class NavigationController:
         if screen in self.views:
             self.window.stack.setCurrentWidget(self.views[screen])
             self.back_stack.append(screen)
+            self.nav_destination_changed.emit(screen)
 
     def pop_back_stack(self):
         if not self.window or not self.views:

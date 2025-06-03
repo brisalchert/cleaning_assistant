@@ -145,6 +145,9 @@ class MainView(AbstractView):
         self._view_model.exporting_completion.connect(self.show_export_completion_message)
         self._view_model.exporting_error.connect(self.show_export_error_message)
 
+        # Connect navigation controller to UI
+        self._nav_controller.nav_destination_changed.connect(self.update_nav_bar)
+
         # Check for existing database credentials
         generate_and_store_key()  # Does nothing if key already exists
         db_credentials = load_encrypted_db_credentials(load_key())

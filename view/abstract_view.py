@@ -50,6 +50,26 @@ class AbstractView(QWidget, metaclass=MetaQWidgetABC):
         """Navigate to a new screen"""
         self.nav_controller.navigate(screen)
 
+    def update_nav_bar(self, screen: Screen):
+        """Update navigation bar selection"""
+        if self._nav_bar:
+            # Temporarily disable exclusivity to uncheck all buttons
+            self._nav_button_group.setExclusive(False)
+            for button in self._nav_button_group.buttons():
+                button.setChecked(False)
+            self._nav_button_group.setExclusive(True)
+
+            # Check button for current screen if applicable
+            match screen:
+                case Screen.MAIN:
+                    self._nav_main.setChecked(True)
+                case Screen.AUTO_CLEAN:
+                    self._nav_auto_clean.setChecked(True)
+                case Screen.ANALYTICS:
+                    self._nav_analytics.setChecked(True)
+                case Screen.DATA_TABLE:
+                    pass
+
     def setup_navigation(self):
         self._nav_bar = QWidget()
         nav_layout = QHBoxLayout()

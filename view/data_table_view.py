@@ -196,6 +196,9 @@ class DataTableView(AbstractView):
         self._view_model.undo_available_changed.connect(lambda enabled: update_button_enabled(self.undo_button, enabled))
         self._view_model.redo_available_changed.connect(lambda enabled: update_button_enabled(self.redo_button, enabled))
 
+        # Connect navigation controller to UI
+        self._nav_controller.nav_destination_changed.connect(self.update_nav_bar)
+
     @QtCore.pyqtSlot(dict)
     def update_table(self, table: dict):
         self.table_name = table["table_name"]

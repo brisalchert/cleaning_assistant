@@ -64,6 +64,9 @@ class AutoCleanView(AbstractView):
         self._view_model.current_step_changed.connect(self.update_step)
         self._view_model.cleaning_stats_updated.connect(self.update_stats)
 
+        # Connect navigation controller to UI
+        self._nav_controller.nav_destination_changed.connect(self.update_nav_bar)
+
     def setup_navigation(self):
         super().setup_navigation()
         self._nav_auto_clean.setChecked(True)
