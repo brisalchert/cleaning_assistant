@@ -1,3 +1,5 @@
+from PyQt6.QtGui import QFont
+from PyQt6.QtWidgets import QLabel, QWidget, QVBoxLayout, QScrollArea, QSizePolicy
 from navigation import NavigationController
 from view import AbstractView
 from viewmodel import AutoCleanViewModel
@@ -23,6 +25,36 @@ class AutoCleanView(AbstractView):
         self.current_step: str = ""
         self.cleaning_stats: dict = {}
 
+        # Set up scroll area for configuration options
+        self.configuration_container = QWidget()
+        self.configuration_container.setLayout(QVBoxLayout())
+        configuration_scroll_area = QScrollArea()
+        configuration_scroll_area.setWidget(self.configuration_container)
+        configuration_scroll_area.setWidgetResizable(True)
+        configuration_scroll_area.setMinimumWidth(500)
+        configuration_scroll_area.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        self.configuration_container.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+
+        # Set up view header
+        self.header_label = QLabel("Auto-Cleaning Configuration")
+        self.header_label.setFont(QFont(self.font, 24))
+
+        # Navigation
+        self.setup_navigation()
+
+        # Main Layout
+        self.auto_clean_layout = QVBoxLayout()
+        self.auto_clean_layout.addWidget(self._nav_bar)
+        self.auto_clean_layout.addWidget(self.header_label)
+        self.auto_clean_layout.addWidget(configuration_scroll_area)
+
+        # ----------------------------------------------------------------------
+        # --- Initialize UI ---
+        # ----------------------------------------------------------------------
+
+        # Initialize UI with the layout
+        self.setLayout(self.auto_clean_layout)
+
         # Connect ViewModel to UI
         self._view_model.nav_destination_changed.connect(self.navigate)
         self._view_model.cleaning_config_changed.connect(self.update_cleaning_config)
@@ -31,6 +63,10 @@ class AutoCleanView(AbstractView):
         self._view_model.progress_updated.connect(self.update_progress)
         self._view_model.current_step_changed.connect(self.update_step)
         self._view_model.cleaning_stats_updated.connect(self.update_stats)
+
+    def setup_navigation(self):
+        super().setup_navigation()
+        self._nav_auto_clean.setChecked(True)
 
     def update_cleaning_config(self, cleaning_config: dict):
         self.cleaning_config = cleaning_config
