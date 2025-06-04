@@ -150,6 +150,9 @@ class AutoCleanView(AbstractView):
         container.layout().addStretch()
         container.layout().addWidget(data_type_select)
 
+        # Map column name to its data type selector
+        self.column_config_map[column_name] = data_type_select
+
         return container
 
     def update_cleaning_config(self, cleaning_config: dict):
