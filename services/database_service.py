@@ -114,7 +114,8 @@ class DatabaseService(AbstractService, DatabaseAccess, ModelEditor):
         tables = {}
 
         for file in file_list:
-            tables[os.path.basename(file)] = self._load_table_file(file, csv_config)
+            name = os.path.splitext(os.path.basename(file))[0]
+            tables[name] = self._load_table_file(file, csv_config)
             self._data_files.append(file)
         self._model.set_database(tables)
 

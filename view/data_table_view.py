@@ -372,6 +372,7 @@ class DataTableView(AbstractView):
         error_dialog.exec()
 
     def handle_data_changed(self, top_left: QModelIndex, bottom_right: QModelIndex):
+        # TODO: Prevent crashes due to invalid edits
         row = top_left.row()
         new_row_df = self.table_view.model().get_dataframe().iloc[[row]]
 
