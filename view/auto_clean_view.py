@@ -1,6 +1,10 @@
+import pandas as pd
+from PyQt6 import QtCore
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import QLabel, QWidget, QVBoxLayout, QScrollArea, QSizePolicy, QComboBox, QHBoxLayout
+from pandas import DataFrame
+
 from navigation import NavigationController
 from view import AbstractView
 from viewmodel import AutoCleanViewModel
@@ -19,7 +23,9 @@ class AutoCleanView(AbstractView):
         super().__init__()
         self._view_model = view_model
         self._nav_controller = nav_controller
-        self.table = None
+        self.table_name: str = ""
+        self.table: DataFrame = pd.DataFrame()
+        self.column_config_map: dict = {}
         self.cleaning_config: dict = {}
         self.analytics_config: dict = {}
         self.cleaning_running: bool = False
@@ -30,7 +36,7 @@ class AutoCleanView(AbstractView):
         # Set up scroll area for configuration options
         self.configuration_container = QWidget()
         self.configuration_container.setLayout(QVBoxLayout())
-        self.configuration_container.layout().setAlignment(Qt.AlignmentFlag.AlignLeft)
+        self.configuration_container.layout().setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
         configuration_scroll_area = QScrollArea()
         configuration_scroll_area.setWidget(self.configuration_container)
         configuration_scroll_area.setWidgetResizable(True)
@@ -44,10 +50,12 @@ class AutoCleanView(AbstractView):
 
         # Table selection
         self.table_select_label = QLabel("Select a table for auto-cleaning: ")
+        self.table_select_label.setFont(QFont(self.font, 14))
         self.table_select = QComboBox()
         self.table_select.setFont(QFont(self.font, 12))
-        self.table_select.currentIndexChanged.connect(lambda: self.set_table(self.table_select.currentText()))
+        self.table_select.currentIndexChanged.connect(lambda: self._view_model.set_table(self.table_select.currentText()))
         self.table_select_container = QWidget()
+        self.table_select_container.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Preferred)
         self.table_select_container.setLayout(QHBoxLayout())
         self.table_select_container.layout().addWidget(self.table_select_label)
         self.table_select_container.layout().addWidget(self.table_select)
@@ -56,6 +64,12 @@ class AutoCleanView(AbstractView):
         # Cleaning configuration
         self.cleaning_config_container = QWidget()
         self.cleaning_config_container.setLayout(QVBoxLayout())
+        self.cleaning_config_container.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Preferred)
+        self.cleaning_column_config_container = QWidget()
+        self.cleaning_column_config_container.setLayout(QVBoxLayout())
+        self.cleaning_column_config_container.layout().setSpacing(0)
+
+        self.cleaning_config_container.layout().addWidget(self.cleaning_column_config_container)
         self.configuration_container.layout().addWidget(self.cleaning_config_container)
 
         # Navigation
@@ -77,6 +91,7 @@ class AutoCleanView(AbstractView):
         # Connect ViewModel to UI
         self._view_model.nav_destination_changed.connect(self.navigate)
         self._view_model.tables_loaded.connect(self.update_table_select)
+        self._view_model.table_changed.connect(self.update_column_options)
         self._view_model.cleaning_config_changed.connect(self.update_cleaning_config)
         self._view_model.analytics_config_changed.connect(self.update_analytics_config)
         self._view_model.cleaning_running_changed.connect(self.update_running)
@@ -91,12 +106,51 @@ class AutoCleanView(AbstractView):
         super().setup_navigation()
         self._nav_auto_clean.setChecked(True)
 
-    def set_table(self, table_name: str):
-        self.table = self._view_model.set_table(table_name)
-
     def update_table_select(self, tables: dict):
         self.table_select.clear()
         self.table_select.addItems(tables.keys())
+        self.table_select.updateGeometry()
+
+    @QtCore.pyqtSlot(dict)
+    def update_column_options(self, table: dict):
+        self.table_name, self.table = next(iter(table.items()))
+
+        layout = self.cleaning_column_config_container.layout()
+
+        # Clear existing column config layout
+        for i in range(layout.count()):
+            widget = layout.itemAt(i).widget()
+            if widget:
+                widget.deleteLater()
+
+        # Clear column config map
+        self.column_config_map.clear()
+
+        # Set up layout for columns in current table
+        for column in self.table.columns:
+            layout.addWidget(self.create_column_config_widget(column))
+
+    def create_column_config_widget(self, column_name: str) -> QWidget:
+        # Create row with dropdown for column data type
+        column_name_label = QLabel(f"{column_name} data type: ")
+        column_name_label.setFont(QFont(self.font, 10))
+
+        data_type_select = QComboBox()
+        data_type_select.setFont(QFont(self.font, 10))
+        data_type_select.addItem("int")
+        data_type_select.addItem("float")
+        data_type_select.addItem("string")
+        data_type_select.addItem("datetime")
+        data_type_select.addItem("category")
+
+        container = QWidget()
+        container.setLayout(QHBoxLayout())
+        container.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        container.layout().addWidget(column_name_label)
+        container.layout().addStretch()
+        container.layout().addWidget(data_type_select)
+
+        return container
 
     def update_cleaning_config(self, cleaning_config: dict):
         self.cleaning_config = cleaning_config
