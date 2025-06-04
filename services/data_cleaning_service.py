@@ -13,9 +13,19 @@ class DataCleaningService(AbstractService, ModelEditor):
     def cleaningScript(self) -> io.TextIOWrapper:
         return self._cleaningScript
 
+    @property
+    def table_name(self) -> str:
+        return self._table_name
+
+    @property
+    def table(self) -> DataFrame:
+        return self._table
+
     def __init__(self, model: DataModel):
         self._model = model
         self._cleaningScript = None
+        self._table_name = None
+        self._table = None
 
     # --- ModelEditor overrides ---
 
@@ -32,6 +42,10 @@ class DataCleaningService(AbstractService, ModelEditor):
         return self._model.delete_row(table_name, primary_key)
 
     # --- Subclass methods ---
+
+    def set_and_retrieve_table(self, table_name: str):
+        self._table = {table_name: self._model.database[table_name]}
+        return self._table
 
     def calculate_missingness(self, column: str) -> Series:
         # TODO: Implement calculate_missingness

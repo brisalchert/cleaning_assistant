@@ -36,6 +36,7 @@ class DataModel:
         return self.database[table_name].get(primary_key, pd.Series())
 
     def update_row(self, table_name: str, row: int, new_row_df: DataFrame) -> bool:
+        # TODO: Fix updated method parameters
         # Check for the table in the database
         if table_name not in self.database:
             return False

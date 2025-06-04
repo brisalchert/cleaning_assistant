@@ -1,5 +1,6 @@
+from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
-from PyQt6.QtWidgets import QLabel, QWidget, QVBoxLayout, QScrollArea, QSizePolicy
+from PyQt6.QtWidgets import QLabel, QWidget, QVBoxLayout, QScrollArea, QSizePolicy, QComboBox, QHBoxLayout
 from navigation import NavigationController
 from view import AbstractView
 from viewmodel import AutoCleanViewModel
@@ -18,6 +19,7 @@ class AutoCleanView(AbstractView):
         super().__init__()
         self._view_model = view_model
         self._nav_controller = nav_controller
+        self.table = None
         self.cleaning_config: dict = {}
         self.analytics_config: dict = {}
         self.cleaning_running: bool = False
@@ -28,6 +30,7 @@ class AutoCleanView(AbstractView):
         # Set up scroll area for configuration options
         self.configuration_container = QWidget()
         self.configuration_container.setLayout(QVBoxLayout())
+        self.configuration_container.layout().setAlignment(Qt.AlignmentFlag.AlignLeft)
         configuration_scroll_area = QScrollArea()
         configuration_scroll_area.setWidget(self.configuration_container)
         configuration_scroll_area.setWidgetResizable(True)
@@ -38,6 +41,22 @@ class AutoCleanView(AbstractView):
         # Set up view header
         self.header_label = QLabel("Auto-Cleaning Configuration")
         self.header_label.setFont(QFont(self.font, 24))
+
+        # Table selection
+        self.table_select_label = QLabel("Select a table for auto-cleaning: ")
+        self.table_select = QComboBox()
+        self.table_select.setFont(QFont(self.font, 12))
+        self.table_select.currentIndexChanged.connect(lambda: self.set_table(self.table_select.currentText()))
+        self.table_select_container = QWidget()
+        self.table_select_container.setLayout(QHBoxLayout())
+        self.table_select_container.layout().addWidget(self.table_select_label)
+        self.table_select_container.layout().addWidget(self.table_select)
+        self.configuration_container.layout().addWidget(self.table_select_container)
+
+        # Cleaning configuration
+        self.cleaning_config_container = QWidget()
+        self.cleaning_config_container.setLayout(QVBoxLayout())
+        self.configuration_container.layout().addWidget(self.cleaning_config_container)
 
         # Navigation
         self.setup_navigation()
@@ -57,6 +76,7 @@ class AutoCleanView(AbstractView):
 
         # Connect ViewModel to UI
         self._view_model.nav_destination_changed.connect(self.navigate)
+        self._view_model.tables_loaded.connect(self.update_table_select)
         self._view_model.cleaning_config_changed.connect(self.update_cleaning_config)
         self._view_model.analytics_config_changed.connect(self.update_analytics_config)
         self._view_model.cleaning_running_changed.connect(self.update_running)
@@ -70,6 +90,13 @@ class AutoCleanView(AbstractView):
     def setup_navigation(self):
         super().setup_navigation()
         self._nav_auto_clean.setChecked(True)
+
+    def set_table(self, table_name: str):
+        self.table = self._view_model.set_table(table_name)
+
+    def update_table_select(self, tables: dict):
+        self.table_select.clear()
+        self.table_select.addItems(tables.keys())
 
     def update_cleaning_config(self, cleaning_config: dict):
         self.cleaning_config = cleaning_config

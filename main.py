@@ -2,7 +2,7 @@ import sys
 from PyQt6.QtWidgets import QApplication, QMainWindow, QStackedWidget
 from model import DataModel
 from navigation import NavigationController, Screen
-from services import DatabaseService, DataEditorService, QueryService, DataCleaningService, AnalyticsService
+from services import DataEditorService, QueryService, DataCleaningService, AnalyticsService, DatabaseServiceWrapper
 from view import MainView, DataTableView, AutoCleanView, AnalyticsView
 from viewmodel import MainViewModel, DataViewerViewModel, AutoCleanViewModel, AnalyticsViewModel
 
@@ -34,16 +34,16 @@ if __name__ == '__main__':
     nav_controller = NavigationController()
 
     # Initialize services
-    database_service = DatabaseService(model)
+    database_service_wrapper = DatabaseServiceWrapper(model)
     data_editor_service = DataEditorService(model)
     query_service = QueryService(model)
     data_cleaning_service = DataCleaningService(model)
     analytics_service = AnalyticsService(model)
 
     # Initialize view models
-    main_view_model = MainViewModel(database_service, data_editor_service)
+    main_view_model = MainViewModel(database_service_wrapper, data_editor_service)
     data_viewer_view_model = DataViewerViewModel(data_editor_service, query_service)
-    auto_clean_view_model = AutoCleanViewModel(data_cleaning_service, analytics_service)
+    auto_clean_view_model = AutoCleanViewModel(database_service_wrapper, data_cleaning_service, analytics_service)
     analytics_view_model = AnalyticsViewModel(data_cleaning_service, analytics_service)
 
     # Initialize views

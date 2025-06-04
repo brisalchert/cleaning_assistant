@@ -1,9 +1,8 @@
 from PyQt6.QtCore import pyqtSignal, QThread
 
 from navigation import Screen
-from services import DatabaseService, DataEditorService, DatabaseLoaderWorker
-from services.database_export_worker import DatabaseExportWorker
-from services.file_loader_worker import FileLoaderWorker
+from services import DataEditorService, DatabaseExportWorker, DatabaseServiceWrapper
+from workers import DatabaseLoaderWorker, FileLoaderWorker
 from utils.security import save_encrypted_db_credentials, load_key, delete_saved_db_credentials
 from viewmodel import ViewModel
 
@@ -19,9 +18,10 @@ class MainViewModel(ViewModel):
     exporting_completion: pyqtSignal = pyqtSignal(str)
     exporting_error: pyqtSignal = pyqtSignal(str)
 
-    def __init__(self, database_service: DatabaseService, data_editor_service: DataEditorService):
+    def __init__(self, database_service_wrapper: DatabaseServiceWrapper, data_editor_service: DataEditorService):
         super().__init__()
-        self.database_service = database_service
+        self.database_service_wrapper = database_service_wrapper
+        self.database_service = database_service_wrapper.database_service
         self.data_editor_service = data_editor_service
         self._nav_destination = Screen.MAIN
         self._data = None
@@ -47,12 +47,12 @@ class MainViewModel(ViewModel):
             "port": port
         }
 
-        self.worker = DatabaseLoaderWorker(self.database_service, self.connection_details)
+        self.worker = DatabaseLoaderWorker(self.database_service_wrapper, self.connection_details)
         self._database_loaded = False
         self.start_worker(self.on_database_loading_finished, self.database_loading_error, self.database_loading_progress)
 
     def load_files(self, file_list: list[str], csv_config: dict):
-        self.worker = FileLoaderWorker(self.database_service, file_list, csv_config)
+        self.worker = FileLoaderWorker(self.database_service_wrapper, file_list, csv_config)
         self._database_loaded = False
         self.start_worker(self.on_file_loading_finished, self.database_loading_error, self.database_loading_progress)
 

@@ -1,12 +1,14 @@
 import io
 from PyQt6.QtCore import pyqtSignal
 from navigation import Screen
-from services import DataCleaningService, AnalyticsService
+from services import DataCleaningService, AnalyticsService, DatabaseServiceWrapper
 from viewmodel import ViewModel
 
 
 class AutoCleanViewModel(ViewModel):
     nav_destination_changed: pyqtSignal = pyqtSignal(Screen)
+    tables_loaded: pyqtSignal = pyqtSignal(dict)
+    table_changed: pyqtSignal = pyqtSignal(dict)
     cleaning_config_changed: pyqtSignal = pyqtSignal(dict)
     analytics_config_changed: pyqtSignal = pyqtSignal(dict)
     cleaning_running_changed: pyqtSignal = pyqtSignal(bool)
@@ -14,16 +16,25 @@ class AutoCleanViewModel(ViewModel):
     current_step_changed: pyqtSignal = pyqtSignal(str)
     cleaning_stats_updated: pyqtSignal = pyqtSignal(dict)
 
-    def __init__(self, data_cleaning_service: DataCleaningService, analytics_service: AnalyticsService):
+    def __init__(self, database_service_wrapper: DatabaseServiceWrapper, data_cleaning_service: DataCleaningService, analytics_service: AnalyticsService):
         super().__init__()
+        self.database_service_wrapper = database_service_wrapper
         self.data_cleaning_service = data_cleaning_service
         self.analytics_service = analytics_service
         self._nav_destination = Screen.AUTO_CLEAN
+        self._table = None
         self._cleaning_config = None
         self._analytics_config = None
         self._cleaning_running = False
         self._progress = None
         self._current_step = None
+
+        # Connect service signal to view model signal
+        self.database_service_wrapper.tables_loaded.connect(self.tables_loaded.emit)
+
+    def set_table(self, table_name: str):
+        self._table = self.data_cleaning_service.set_and_retrieve_table(table_name)
+        self.table_changed.emit(self._table)
 
     def set_nav_destination(self, destination: Screen):
         self._nav_destination = destination
