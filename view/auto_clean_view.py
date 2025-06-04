@@ -46,6 +46,26 @@ class AutoCleanView(AbstractView):
         configuration_scroll_area.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.configuration_container.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
 
+        # Set up scroll area for cleaning statistics
+        self.statistics_container = QWidget()
+        self.statistics_container.setLayout(QVBoxLayout())
+        statistics_scroll_area = QScrollArea()
+        statistics_scroll_area.setWidget(self.statistics_container)
+        statistics_scroll_area.setWidgetResizable(True)
+        statistics_scroll_area.setMinimumWidth(300)
+        statistics_scroll_area.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        self.statistics_container.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+
+        # Group scroll areas with splitter
+        self.splitter = QSplitter(QtCore.Qt.Orientation.Horizontal)
+        self.splitter.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        self.splitter.addWidget(configuration_scroll_area)
+        self.splitter.addWidget(statistics_scroll_area)
+        self.splitter.setSizes([900, 300])
+        self.splitter.setCollapsible(0, False)
+        self.splitter.setCollapsible(1, False)
+        self.splitter.setHandleWidth(5)
+
         # Set up view header
         self.header_label = QLabel("Auto-Cleaning Configuration")
         self.header_label.setFont(QFont(self.font, 24))
@@ -162,7 +182,11 @@ class AutoCleanView(AbstractView):
 
         self.analytics_config_container.layout().addStretch()
 
+        # ----------------------------------------------------------------------
         # Set up layout
+        # ----------------------------------------------------------------------
+
+        # Cleaning/Analytics Configuration Layout
         self.configuration_split = QWidget()
         self.configuration_split.setLayout(QHBoxLayout())
         self.configuration_split.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
@@ -178,7 +202,7 @@ class AutoCleanView(AbstractView):
         self.auto_clean_layout = QVBoxLayout()
         self.auto_clean_layout.addWidget(self._nav_bar)
         self.auto_clean_layout.addWidget(self.header_label)
-        self.auto_clean_layout.addWidget(configuration_scroll_area)
+        self.auto_clean_layout.addWidget(self.splitter)
 
         # ----------------------------------------------------------------------
         # --- Initialize UI ---
