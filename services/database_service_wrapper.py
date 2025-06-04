@@ -1,4 +1,5 @@
 from PyQt6.QtCore import QObject, pyqtSignal
+
 from model import DataModel
 from services import DatabaseService
 

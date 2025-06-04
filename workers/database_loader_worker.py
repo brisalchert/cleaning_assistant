@@ -1,4 +1,5 @@
 from PyQt6.QtCore import pyqtSignal, QObject
+
 from services import DatabaseServiceWrapper
 
 

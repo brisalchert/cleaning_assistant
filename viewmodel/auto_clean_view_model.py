@@ -1,5 +1,7 @@
 import io
+
 from PyQt6.QtCore import pyqtSignal
+
 from navigation import Screen
 from services import DataCleaningService, AnalyticsService, DatabaseServiceWrapper
 from viewmodel import ViewModel

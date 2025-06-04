@@ -5,6 +5,7 @@ from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import QVBoxLayout, QWidget, QSizePolicy, QLabel, QComboBox, QHBoxLayout, QTableView, QScrollArea, \
     QSplitter, QTextEdit, QPushButton, QLineEdit, QDialog, QMessageBox
 from pandas import DataFrame
+
 from model import DataFrameModel
 from navigation import NavigationController
 from utils import resize_table_view

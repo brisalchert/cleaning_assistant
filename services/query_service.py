@@ -1,5 +1,6 @@
 from pandas import DataFrame
 from pandasql import sqldf
+
 from model import DataModel
 from services import AbstractService
 

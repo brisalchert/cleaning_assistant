@@ -1,4 +1,5 @@
 from pandas import Series
+
 from model import DataModel
 from services import AbstractService, ModelEditor
 

@@ -1,5 +1,7 @@
 import io
+
 from pandas import Series, DataFrame
+
 from model import DataModel
 from services import AbstractService, ModelEditor
 

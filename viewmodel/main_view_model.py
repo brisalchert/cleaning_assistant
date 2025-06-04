@@ -2,9 +2,9 @@ from PyQt6.QtCore import pyqtSignal, QThread
 
 from navigation import Screen
 from services import DataEditorService, DatabaseExportWorker, DatabaseServiceWrapper
-from workers import DatabaseLoaderWorker, FileLoaderWorker
 from utils.security import save_encrypted_db_credentials, load_key, delete_saved_db_credentials
 from viewmodel import ViewModel
+from workers import DatabaseLoaderWorker, FileLoaderWorker
 
 
 class MainViewModel(ViewModel):

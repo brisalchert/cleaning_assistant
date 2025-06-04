@@ -1,5 +1,7 @@
-from abc import ABC, abstractmethod, ABCMeta
+from abc import abstractmethod, ABCMeta
+
 from PyQt6.QtCore import QObject
+
 from navigation import Screen
 
 

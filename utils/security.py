@@ -1,6 +1,7 @@
+import os
+
 from PyQt6.QtCore import QSettings
 from cryptography.fernet import Fernet
-import os
 
 key_path = os.path.expanduser("~\\.db_key")
 
