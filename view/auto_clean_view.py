@@ -2,7 +2,8 @@ import pandas as pd
 from PyQt6 import QtCore
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
-from PyQt6.QtWidgets import QLabel, QWidget, QVBoxLayout, QScrollArea, QSizePolicy, QComboBox, QHBoxLayout
+from PyQt6.QtWidgets import QLabel, QWidget, QVBoxLayout, QScrollArea, QSizePolicy, QComboBox, QHBoxLayout, \
+    QButtonGroup, QRadioButton, QCheckBox, QPushButton, QProgressBar, QSplitter
 from pandas import DataFrame
 
 from navigation import NavigationController
@@ -61,16 +62,77 @@ class AutoCleanView(AbstractView):
         self.table_select_container.layout().addWidget(self.table_select)
         self.configuration_container.layout().addWidget(self.table_select_container)
 
-        # Cleaning configuration
+        # ----------------------------------------------------------------------
+        # --- Cleaning configuration ---
+        # ----------------------------------------------------------------------
+
         self.cleaning_config_container = QWidget()
         self.cleaning_config_container.setLayout(QVBoxLayout())
         self.cleaning_config_container.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Preferred)
+
+        # TODO: Connect buttons to config changes
+        # Column-specific options
+        # TODO: Add category selection, numerical ranges, string length limits
+        self.cleaning_column_options_label = QLabel("Column Configuration:")
+        self.cleaning_column_options_label.setFont(QFont(self.font, 12))
         self.cleaning_column_config_container = QWidget()
         self.cleaning_column_config_container.setLayout(QVBoxLayout())
         self.cleaning_column_config_container.layout().setSpacing(0)
-
+        self.cleaning_config_container.layout().addWidget(self.cleaning_column_options_label)
         self.cleaning_config_container.layout().addWidget(self.cleaning_column_config_container)
-        self.configuration_container.layout().addWidget(self.cleaning_config_container)
+
+        # Uniqueness Constraints
+        self.uniqueness_label = QLabel("Uniqueness Constraints:")
+        self.uniqueness_label.setFont(QFont(self.font, 12))
+        self.delete_duplicates_checkbox = QCheckBox("Delete exact duplicates")
+        self.delete_duplicates_checkbox.setFont(QFont(self.font, 10))
+        self.merge_duplicates_checkbox = QCheckBox("Merge almost exact duplicates")
+        self.merge_duplicates_checkbox.setFont(QFont(self.font, 10))
+        self.cleaning_config_container.layout().addWidget(self.uniqueness_label)
+        self.cleaning_config_container.layout().addWidget(self.delete_duplicates_checkbox)
+        self.cleaning_config_container.layout().addWidget(self.merge_duplicates_checkbox)
+
+        # Missing Values
+        self.missingness_label = QLabel("Missing values:")
+        self.missingness_label.setFont(QFont(self.font, 12))
+        self.drop_missing_checkbox = QCheckBox("Drop missing values")
+        self.drop_missing_checkbox.setFont(QFont(self.font, 10))
+        self.impute_missing_checkbox = QCheckBox("Impute missing values")
+        self.impute_missing_checkbox.setFont(QFont(self.font, 10))
+        self.cleaning_config_container.layout().addWidget(self.missingness_label)
+        self.cleaning_config_container.layout().addWidget(self.drop_missing_checkbox)
+        self.cleaning_config_container.layout().addWidget(self.impute_missing_checkbox)
+
+        # Run button and progress bar
+        self.run_button = QPushButton("Run Current Configuration")
+        self.run_button.setFont(QFont(self.font, 12))
+        self.progress_bar_label = QLabel("Waiting to run...")
+        self.progress_bar_label.setFont(QFont(self.font, 10))
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setFont(QFont(self.font, 12))
+        self.progress_bar.setRange(0, 100)
+        self.progress_bar.setValue(0)
+        self.cleaning_config_container.layout().addStretch()
+        self.cleaning_config_container.layout().addWidget(self.run_button)
+        self.cleaning_config_container.layout().addWidget(self.progress_bar_label)
+        self.cleaning_config_container.layout().addWidget(self.progress_bar)
+
+        # ----------------------------------------------------------------------
+        # --- Analytics Configuration ---
+        # ----------------------------------------------------------------------
+
+        self.analytics_config_container = QWidget()
+        self.analytics_config_container.setLayout(QVBoxLayout())
+        self.analytics_config_container.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Preferred)
+
+        # Set up layout
+        self.configuration_split = QWidget()
+        self.configuration_split.setLayout(QHBoxLayout())
+        self.configuration_split.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        self.configuration_split.layout().addWidget(self.cleaning_config_container)
+        self.configuration_split.layout().addWidget(self.analytics_config_container)
+        self.configuration_split.layout().addStretch()
+        self.configuration_container.layout().addWidget(self.configuration_split)
 
         # Navigation
         self.setup_navigation()
@@ -152,6 +214,8 @@ class AutoCleanView(AbstractView):
 
         # Map column name to its data type selector
         self.column_config_map[column_name] = data_type_select
+
+        # TODO: Connect selector to changes in cleaning config
 
         return container
 
