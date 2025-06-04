@@ -26,7 +26,8 @@ class AutoCleanView(AbstractView):
         self._nav_controller = nav_controller
         self.table_name: str = ""
         self.table: DataFrame = pd.DataFrame()
-        self.column_config_map: dict = {}
+        self.cleaning_column_config_map: dict = {}
+        self.analytics_column_config_map: dict = {}
         self.cleaning_config: dict = {}
         self.analytics_config: dict = {}
         self.cleaning_running: bool = False
@@ -70,14 +71,18 @@ class AutoCleanView(AbstractView):
         self.cleaning_config_container.setLayout(QVBoxLayout())
         self.cleaning_config_container.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Preferred)
 
+        # Configuration Header
+        self.cleaning_config_header = QLabel("Cleaning Configuration:")
+        self.cleaning_config_header.setFont(QFont(self.font, 14))
+        self.cleaning_config_container.layout().addWidget(self.cleaning_config_header)
+
         # TODO: Connect buttons to config changes
         # Column-specific options
         # TODO: Add category selection, numerical ranges, string length limits
-        self.cleaning_column_options_label = QLabel("Column Configuration:")
+        self.cleaning_column_options_label = QLabel("Column Options:")
         self.cleaning_column_options_label.setFont(QFont(self.font, 12))
         self.cleaning_column_config_container = QWidget()
         self.cleaning_column_config_container.setLayout(QVBoxLayout())
-        self.cleaning_column_config_container.layout().setSpacing(0)
         self.cleaning_config_container.layout().addWidget(self.cleaning_column_options_label)
         self.cleaning_config_container.layout().addWidget(self.cleaning_column_config_container)
 
@@ -124,6 +129,38 @@ class AutoCleanView(AbstractView):
         self.analytics_config_container = QWidget()
         self.analytics_config_container.setLayout(QVBoxLayout())
         self.analytics_config_container.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Preferred)
+
+        # Configuration Header
+        self.analytics_config_header = QLabel("Analytics Configuration:")
+        self.analytics_config_header.setFont(QFont(self.font, 14))
+        self.analytics_config_container.layout().addWidget(self.analytics_config_header)
+
+        # Column-specific options
+        self.analytics_column_options_label = QLabel("Column Options:")
+        self.analytics_column_options_label.setFont(QFont(self.font, 12))
+        self.analytics_column_config_container = QWidget()
+        self.analytics_column_config_container.setLayout(QVBoxLayout())
+        self.analytics_column_config_container.layout().setSpacing(0)
+        self.analytics_config_container.layout().addWidget(self.analytics_column_options_label)
+        self.analytics_config_container.layout().addWidget(self.analytics_column_config_container)
+
+        # Categorical values
+        self.category_analysis_label = QLabel("Category Analysis:")
+        self.category_analysis_label.setFont(QFont(self.font, 12))
+        self.category_analysis_checkbox = QCheckBox("Analyze category consistency")
+        self.category_analysis_checkbox.setFont(QFont(self.font, 10))
+        self.analytics_config_container.layout().addWidget(self.category_analysis_label)
+        self.analytics_config_container.layout().addWidget(self.category_analysis_checkbox)
+
+        # Unit uniformity for numerical values
+        self.unit_uniformity_label = QLabel("Unit Uniformity:")
+        self.unit_uniformity_label.setFont(QFont(self.font, 12))
+        self.unit_uniformity_checkbox = QCheckBox("Analyze unit uniformity")
+        self.unit_uniformity_checkbox.setFont(QFont(self.font, 10))
+        self.analytics_config_container.layout().addWidget(self.unit_uniformity_label)
+        self.analytics_config_container.layout().addWidget(self.unit_uniformity_checkbox)
+
+        self.analytics_config_container.layout().addStretch()
 
         # Set up layout
         self.configuration_split = QWidget()
@@ -177,22 +214,39 @@ class AutoCleanView(AbstractView):
     def update_column_options(self, table: dict):
         self.table_name, self.table = next(iter(table.items()))
 
-        layout = self.cleaning_column_config_container.layout()
+        # Update cleaning layout
+        cleaning_layout = self.cleaning_column_config_container.layout()
 
         # Clear existing column config layout
-        for i in range(layout.count()):
-            widget = layout.itemAt(i).widget()
+        for i in range(cleaning_layout.count()):
+            widget = cleaning_layout.itemAt(i).widget()
             if widget:
                 widget.deleteLater()
 
         # Clear column config map
-        self.column_config_map.clear()
+        self.cleaning_column_config_map.clear()
 
         # Set up layout for columns in current table
         for column in self.table.columns:
-            layout.addWidget(self.create_column_config_widget(column))
+            cleaning_layout.addWidget(self.create_cleaning_column_config_widget(column))
 
-    def create_column_config_widget(self, column_name: str) -> QWidget:
+        # Update analytics layout
+        analytics_layout = self.analytics_column_config_container.layout()
+
+        # Clear existing column config layout
+        for i in range(analytics_layout.count()):
+            widget = analytics_layout.itemAt(i).widget()
+            if widget:
+                widget.deleteLater()
+
+        # Clear column config map
+        self.analytics_column_config_map.clear()
+
+        # Set up layout for columns in current table
+        for column in self.table.columns:
+            analytics_layout.addWidget(self.create_analytics_column_config_widget(column))
+
+    def create_cleaning_column_config_widget(self, column_name: str) -> QWidget:
         # Create row with dropdown for column data type
         column_name_label = QLabel(f"{column_name} data type: ")
         column_name_label.setFont(QFont(self.font, 10))
@@ -213,9 +267,42 @@ class AutoCleanView(AbstractView):
         container.layout().addWidget(data_type_select)
 
         # Map column name to its data type selector
-        self.column_config_map[column_name] = data_type_select
+        self.cleaning_column_config_map[column_name] = data_type_select
 
         # TODO: Connect selector to changes in cleaning config
+
+        return container
+
+    def create_analytics_column_config_widget(self, column_name: str) -> QWidget:
+        # Create row with checkboxes for analytics options
+        column_name_label = QLabel(f"{column_name}:")
+        column_name_label.setFont(QFont(self.font, 10))
+
+        distribution_plot_checkbox = QCheckBox("Analyze data distribution")
+        distribution_plot_checkbox.setFont(QFont(self.font, 10))
+
+        missingness_plot_checkbox = QCheckBox("Analyze missingness pattern")
+        missingness_plot_checkbox.setFont(QFont(self.font, 10))
+
+        outlier_plot_checkbox = QCheckBox("Analyze outliers")
+        outlier_plot_checkbox.setFont(QFont(self.font, 10))
+
+        container = QWidget()
+        container.setLayout(QVBoxLayout())
+        container.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        container.layout().addWidget(column_name_label)
+        container.layout().addWidget(distribution_plot_checkbox)
+        container.layout().addWidget(missingness_plot_checkbox)
+        container.layout().addWidget(outlier_plot_checkbox)
+
+        # Map column name to analytics options
+        self.analytics_column_config_map[column_name] = [
+            distribution_plot_checkbox,
+            missingness_plot_checkbox,
+            outlier_plot_checkbox
+        ]
+
+        # TODO: Connect options to changes in analytics config
 
         return container
 
