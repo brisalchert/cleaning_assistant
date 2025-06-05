@@ -1,5 +1,7 @@
 import io
 
+import pandas as pd
+from fuzzywuzzy import process
 from pandas import Series, DataFrame
 
 from model import DataModel
@@ -27,7 +29,7 @@ class DataCleaningService(AbstractService, ModelEditor):
         self._model = model
         self._cleaningScript = None
         self._table_name = None
-        self._table = None
+        self._table: DataFrame = pd.DataFrame()
 
     # --- ModelEditor overrides ---
 
@@ -45,53 +47,64 @@ class DataCleaningService(AbstractService, ModelEditor):
 
     # --- Subclass methods ---
 
-    def set_and_retrieve_table(self, table_name: str):
-        self._table = {table_name: self._model.database[table_name]}
-        return self._table
+    def set_and_retrieve_table(self, table_name: str) -> dict:
+        self._table_name = table_name
+        self._table = self._model._database[table_name]
+        return {table_name: self._table}
 
-    def calculate_missingness(self, column: str) -> Series:
-        # TODO: Implement calculate_missingness
-        pass
+    def calculate_missingness(self, column: str):
+        missing = self._table[column].isna()
 
-    def impute_missing(self, column: str, statistic: float):
-        # TODO: Implement impute_missing
-        pass
+        return missing.sum()
+
+
+    def impute_missing_mean(self, column: str):
+        self._table = self._table[column].fillna(self._table[column].mean())
+
+    def impute_missing_median(self, column: str):
+        self._table = self._table[column].fillna(self._table[column].median())
 
     def drop_missing(self, column: str):
-        # TODO: Implement drop_missing
-        pass
+        self._table = self._table[column].dropna()
 
     def get_categories(self, column: str):
-        # TODO: Implement get_categories
-        pass
+        if self._table[column].dtype == "category":
+            return self._table[column].cat.categories
+        else:
+            return self._table[column].unique()
 
     def clean_categories(self, column: str, correction_map: dict):
-        # TODO: Implement clean_categories
-        pass
+        self._table[column] = self._table[column].replace(correction_map)
+        self._table[column] = self._table[column].astype("category")
+
+    def autocorrect_categories(self, column: str, correct_categories: list):
+        self._table[column] = self._table[column].apply(lambda row: correct_spelling(row, correct_categories))
+        self._table[column] = self._table[column].astype("category")
 
     def trim_strings(self, column: str):
-        # TODO: Implement trim_strings
-        pass
+        self._table[column] = self._table[column].str.strip()
 
     def rename_column(self, column: str, new_name: str):
-        # TODO: Implement rename_column
-        pass
+        self._table[column] = self._table[column].rename(new_name)
 
     def get_data_type(self, column: str):
-        # TODO: Implement get_data_type
-        pass
+        return self._table[column].dtype
 
-    def clean_duplicates(self, column: str):
-        # TODO: Implement clean_duplicates
-        pass
+    def drop_duplicates(self, column: str):
+        self._table[column] = self._table[column].drop_duplicates()
 
     def get_outliers(self, column: str) -> DataFrame:
-        # TODO: Implement get_outliers
-        pass
+        q_low = self._table[column].quantile(0.01)
+        q_high = self._table[column].quantile(0.99)
+
+        df_outliers = self._table[(self._table[column] < q_low) | (self._table[column] > q_high)]
+        return df_outliers
 
     def drop_outliers(self, column: str, minimum: float = None, maximum: float = None):
-        # TODO: Implement drop_outliers
-        pass
+        if minimum is None or maximum is None:
+            minimum, maximum = self._table[column].quantile(0.01), self._table[column].quantile(0.99)
+
+        self._table = self._table[(self._table[column] > minimum) & (self._table[column] < maximum)]
 
     def set_cleaning_script(self, script: io.TextIOWrapper):
         # TODO: Implement set_cleaning_script
@@ -104,3 +117,11 @@ class DataCleaningService(AbstractService, ModelEditor):
     def apply_cleaning_script(self):
         # TODO: Implement apply_cleaning_script
         pass
+
+def correct_spelling(row, categories: list):
+    """Support function for correcting category spelling errors"""
+    match = process.extractOne(row, categories)
+    if match[1] >= 80: # Similarity score threshold for replacement
+        return match[0]
+    else:
+        return row
