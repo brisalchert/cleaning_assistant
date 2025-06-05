@@ -3,7 +3,7 @@ from PyQt6 import QtCore
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import QLabel, QWidget, QVBoxLayout, QScrollArea, QSizePolicy, QComboBox, QHBoxLayout, \
-    QButtonGroup, QRadioButton, QCheckBox, QPushButton, QProgressBar, QSplitter
+    QButtonGroup, QRadioButton, QCheckBox, QPushButton, QProgressBar, QSplitter, QFrame
 from pandas import DataFrame
 
 from navigation import NavigationController
@@ -207,7 +207,13 @@ class AutoCleanView(AbstractView):
         self.configuration_split = QWidget()
         self.configuration_split.setLayout(QHBoxLayout())
         self.configuration_split.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+
+        separator = QFrame()
+        separator.setFrameShape(QFrame.Shape.VLine)
+        separator.setFrameShadow(QFrame.Shadow.Sunken)
+
         self.configuration_split.layout().addWidget(self.cleaning_config_container)
+        self.configuration_split.layout().addWidget(separator)
         self.configuration_split.layout().addWidget(self.analytics_config_container)
         self.configuration_split.layout().addStretch()
         self.configuration_container.layout().addWidget(self.configuration_split)
