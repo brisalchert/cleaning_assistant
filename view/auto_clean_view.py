@@ -512,6 +512,9 @@ class AutoCleanView(AbstractView):
             )
         )
 
+        # Call once when binding the signal to initialize the configuration
+        self._view_model.set_cleaning_config(config_key, config_value_getter(), column=column)
+
     def bind_analysis_config_update(self, signal, config_key, config_value_getter, column=None):
         """Binds the signal from a configuration selector to its corresponding
         setting in the analysis configuration."""
@@ -522,6 +525,9 @@ class AutoCleanView(AbstractView):
                 column=column
             )
         )
+
+        # Call once when binding the signal to initialize the configuration
+        self._view_model.set_analytics_config(config_key, config_value_getter(), column=column)
 
     def update_cleaning_config(self, cleaning_config: dict):
         self.cleaning_config = cleaning_config
