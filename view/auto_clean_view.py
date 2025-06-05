@@ -46,6 +46,24 @@ class AutoCleanView(AbstractView):
         configuration_scroll_area.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.configuration_container.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
 
+        # Run button and progress bar
+        self.run_button = QPushButton("Run Current Configuration")
+        self.run_button.setFont(QFont(self.font, 12))
+        self.progress_bar_label = QLabel("Waiting to run...")
+        self.progress_bar_label.setFont(QFont(self.font, 10))
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setFont(QFont(self.font, 12))
+        self.progress_bar.setRange(0, 100)
+        self.progress_bar.setValue(0)
+
+        # Place run button below configuration scroll area
+        self.run_container = QWidget()
+        self.run_container.setLayout(QVBoxLayout())
+        self.run_container.layout().addWidget(configuration_scroll_area)
+        self.run_container.layout().addWidget(self.run_button)
+        self.run_container.layout().addWidget(self.progress_bar_label)
+        self.run_container.layout().addWidget(self.progress_bar)
+
         # Set up scroll area for cleaning statistics
         self.statistics_container = QWidget()
         self.statistics_container.setLayout(QVBoxLayout())
@@ -59,7 +77,7 @@ class AutoCleanView(AbstractView):
         # Group scroll areas with splitter
         self.splitter = QSplitter(QtCore.Qt.Orientation.Horizontal)
         self.splitter.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        self.splitter.addWidget(configuration_scroll_area)
+        self.splitter.addWidget(self.run_container)
         self.splitter.addWidget(statistics_scroll_area)
         self.splitter.setSizes([900, 300])
         self.splitter.setCollapsible(0, False)
@@ -137,19 +155,8 @@ class AutoCleanView(AbstractView):
         self.cleaning_config_container.layout().addWidget(self.impute_missing_button)
         self.cleaning_config_container.layout().addWidget(self.leave_missing_button)
 
-        # Run button and progress bar
-        self.run_button = QPushButton("Run Current Configuration")
-        self.run_button.setFont(QFont(self.font, 12))
-        self.progress_bar_label = QLabel("Waiting to run...")
-        self.progress_bar_label.setFont(QFont(self.font, 10))
-        self.progress_bar = QProgressBar()
-        self.progress_bar.setFont(QFont(self.font, 12))
-        self.progress_bar.setRange(0, 100)
-        self.progress_bar.setValue(0)
+        # Align layout items to the top
         self.cleaning_config_container.layout().addStretch()
-        self.cleaning_config_container.layout().addWidget(self.run_button)
-        self.cleaning_config_container.layout().addWidget(self.progress_bar_label)
-        self.cleaning_config_container.layout().addWidget(self.progress_bar)
 
         # ----------------------------------------------------------------------
         # --- Analytics Configuration ---
@@ -189,6 +196,7 @@ class AutoCleanView(AbstractView):
         self.analytics_config_container.layout().addWidget(self.unit_uniformity_label)
         self.analytics_config_container.layout().addWidget(self.unit_uniformity_checkbox)
 
+        # Align layout items to the top
         self.analytics_config_container.layout().addStretch()
 
         # ----------------------------------------------------------------------
