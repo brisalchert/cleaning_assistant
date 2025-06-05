@@ -56,6 +56,7 @@ class DataEditorService(AbstractService, ModelEditor):
         return self._model.read_row(table_name, primary_key)
 
     def update_row(self, table_name: str, row: int, new_row_df: DataFrame) -> bool:
+        # TODO: Check data types when making edits
         old_row_df = self._model.database[table_name].iloc[[row]].copy(deep=True)
         result = self._model.update_row(table_name, row, new_row_df)
 

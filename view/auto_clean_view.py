@@ -8,6 +8,7 @@ from PyQt6.QtWidgets import QLabel, QWidget, QVBoxLayout, QScrollArea, QSizePoli
 from pandas import DataFrame
 
 from navigation import NavigationController
+from utils import Configuration
 from view import AbstractView
 from viewmodel import AutoCleanViewModel
 
@@ -27,8 +28,6 @@ class AutoCleanView(AbstractView):
         self._nav_controller = nav_controller
         self.table_name: str = ""
         self.table: DataFrame = pd.DataFrame()
-        self.cleaning_column_config_map: dict = {}
-        self.analytics_column_config_map: dict = {}
         self.cleaning_config: dict = {}
         self.analytics_config: dict = {}
         self.cleaning_running: bool = False
@@ -115,7 +114,6 @@ class AutoCleanView(AbstractView):
         self.cleaning_config_header.setFont(QFont(self.font, 14))
         self.cleaning_config_container.layout().addWidget(self.cleaning_config_header)
 
-        # TODO: Connect buttons to config changes
         # Column-specific options
         self.cleaning_column_options_label = QLabel("Column Options:")
         self.cleaning_column_options_label.setFont(QFont(self.font, 12))
@@ -134,6 +132,18 @@ class AutoCleanView(AbstractView):
         self.cleaning_config_container.layout().addWidget(self.uniqueness_label)
         self.cleaning_config_container.layout().addWidget(self.delete_duplicates_checkbox)
         self.cleaning_config_container.layout().addWidget(self.merge_duplicates_checkbox)
+
+        self.bind_cleaning_config_update(
+            self.delete_duplicates_checkbox.checkStateChanged,
+            Configuration.DELETE_DUPLICATES,
+            self.delete_duplicates_checkbox.isChecked
+        )
+
+        self.bind_cleaning_config_update(
+            self.merge_duplicates_checkbox.checkStateChanged,
+            Configuration.MERGE_DUPLICATES,
+            self.merge_duplicates_checkbox.isChecked
+        )
 
         # Missing Values
         self.missingness_label = QLabel("Missing values:")
@@ -158,6 +168,24 @@ class AutoCleanView(AbstractView):
         self.cleaning_config_container.layout().addWidget(self.impute_missing_mean_button)
         self.cleaning_config_container.layout().addWidget(self.impute_missing_median_button)
         self.cleaning_config_container.layout().addWidget(self.leave_missing_button)
+
+        self.bind_cleaning_config_update(
+            self.drop_missing_button.toggled,
+            Configuration.DROP_MISSING,
+            self.drop_missing_button.isChecked
+        )
+
+        self.bind_cleaning_config_update(
+            self.impute_missing_mean_button.toggled,
+            Configuration.IMPUTE_MISSING_MEAN,
+            self.impute_missing_mean_button.isChecked
+        )
+
+        self.bind_cleaning_config_update(
+            self.impute_missing_median_button.toggled,
+            Configuration.IMPUTE_MISSING_MEDIAN,
+            self.impute_missing_median_button.isChecked
+        )
 
         # Align layout items to the top
         self.cleaning_config_container.layout().addStretch()
@@ -192,6 +220,12 @@ class AutoCleanView(AbstractView):
         self.analytics_config_container.layout().addWidget(self.missingness_analysis_label)
         self.analytics_config_container.layout().addWidget(self.missingness_plot_checkbox)
 
+        self.bind_analysis_config_update(
+            self.missingness_plot_checkbox.checkStateChanged,
+            Configuration.ANALYZE_MISSINGNESS,
+            self.missingness_plot_checkbox.isChecked
+        )
+
         # Categorical values
         self.category_analysis_label = QLabel("Category Analysis:")
         self.category_analysis_label.setFont(QFont(self.font, 12))
@@ -200,6 +234,12 @@ class AutoCleanView(AbstractView):
         self.analytics_config_container.layout().addWidget(self.category_analysis_label)
         self.analytics_config_container.layout().addWidget(self.category_analysis_checkbox)
 
+        self.bind_analysis_config_update(
+            self.category_analysis_checkbox.checkStateChanged,
+            Configuration.ANALYZE_CATEGORIES,
+            self.category_analysis_checkbox.isChecked
+        )
+
         # Unit uniformity for numerical values
         self.unit_uniformity_label = QLabel("Unit Uniformity:")
         self.unit_uniformity_label.setFont(QFont(self.font, 12))
@@ -207,6 +247,12 @@ class AutoCleanView(AbstractView):
         self.unit_uniformity_checkbox.setFont(QFont(self.font, 10))
         self.analytics_config_container.layout().addWidget(self.unit_uniformity_label)
         self.analytics_config_container.layout().addWidget(self.unit_uniformity_checkbox)
+
+        self.bind_analysis_config_update(
+            self.unit_uniformity_checkbox.checkStateChanged,
+            Configuration.ANALYZE_UNITS,
+            self.unit_uniformity_checkbox.isChecked
+        )
 
         # Align layout items to the top
         self.analytics_config_container.layout().addStretch()
@@ -282,9 +328,6 @@ class AutoCleanView(AbstractView):
             if widget:
                 widget.deleteLater()
 
-        # Clear column config map
-        self.cleaning_column_config_map.clear()
-
         # Set up layout for columns in current table
         for column in self.table.columns:
             cleaning_layout.addWidget(self.create_cleaning_column_config_widget(column))
@@ -298,9 +341,6 @@ class AutoCleanView(AbstractView):
             if widget:
                 widget.deleteLater()
 
-        # Clear column config map
-        self.analytics_column_config_map.clear()
-
         # Set up layout for columns in current table
         for column in self.table.columns:
             analytics_layout.addWidget(self.create_analytics_column_config_widget(column))
@@ -312,10 +352,11 @@ class AutoCleanView(AbstractView):
 
         data_type_select = QComboBox()
         data_type_select.setFont(QFont(self.font, 10))
-        data_type_select.addItem("int")
-        data_type_select.addItem("double")
+        data_type_select.addItem("int64")
+        data_type_select.addItem("float64")
+        data_type_select.addItem("bool")
         data_type_select.addItem("string")
-        data_type_select.addItem("date")
+        data_type_select.addItem("datetime64")
         data_type_select.addItem("category")
         data_type_select.addItem("object")
 
@@ -325,11 +366,11 @@ class AutoCleanView(AbstractView):
         int_min = self.append_constraints_widget(int_range_container, "Min:", QIntValidator())
         int_max = self.append_constraints_widget(int_range_container, "Max:", QIntValidator())
 
-        # Double range constraints
-        double_range_container = QWidget()
-        double_range_container.setLayout(QHBoxLayout())
-        double_min = self.append_constraints_widget(double_range_container, "Min:", QDoubleValidator())
-        double_max = self.append_constraints_widget(double_range_container, "Max:", QDoubleValidator())
+        # Float range constraints
+        float_range_container = QWidget()
+        float_range_container.setLayout(QHBoxLayout())
+        float_min = self.append_constraints_widget(float_range_container, "Min:", QDoubleValidator())
+        float_max = self.append_constraints_widget(float_range_container, "Max:", QDoubleValidator())
 
         # String length constraints
         string_length_container = QWidget()
@@ -351,11 +392,12 @@ class AutoCleanView(AbstractView):
         data_type_config_stack = QStackedWidget()
         data_type_config_stack.setLayout(QHBoxLayout())
         data_type_config_stack.layout().addWidget(int_range_container)
-        data_type_config_stack.layout().addWidget(double_range_container)
+        data_type_config_stack.layout().addWidget(float_range_container)
+        data_type_config_stack.layout().addWidget(QWidget()) # Empty for "bool" type
         data_type_config_stack.layout().addWidget(string_length_container)
         data_type_config_stack.layout().addWidget(date_range_container)
         data_type_config_stack.layout().addWidget(category_names_container)
-        data_type_config_stack.layout().addWidget(QWidget()) # Empty for "Object" type
+        data_type_config_stack.layout().addWidget(QWidget()) # Empty for "object" type
 
         # Connect selector to changes in stacked widget display
         data_type_select.currentIndexChanged.connect(data_type_config_stack.setCurrentIndex)
@@ -367,20 +409,61 @@ class AutoCleanView(AbstractView):
         container.layout().addWidget(data_type_select)
         container.layout().addWidget(data_type_config_stack)
 
-        # Map selectors for access to values and signals
-        self.cleaning_column_config_map[column_name] = {
-            "type_selector": data_type_select,
-            "int_min": int_min,
-            "int_max": int_max,
-            "double_min": double_min,
-            "double_max": double_max,
-            "string_max": string_max,
-            "date_min": date_min,
-            "date_max": date_max,
-            "categories": categories
-        }
-
-        # TODO: Connect selector to changes in cleaning config
+        # Connect selector signals to cleaning configuration
+        self.bind_cleaning_config_update(
+            data_type_select.currentIndexChanged,
+            Configuration.DATA_TYPE,
+            data_type_select.currentText,
+            column_name
+        )
+        self.bind_cleaning_config_update(
+            int_min.textChanged,
+            Configuration.INT_MIN,
+            int_min.text,
+            column_name
+        )
+        self.bind_cleaning_config_update(
+            int_max.textChanged,
+            Configuration.INT_MAX,
+            int_max.text,
+            column_name
+        )
+        self.bind_cleaning_config_update(
+            float_min.textChanged,
+            Configuration.FLOAT_MIN,
+            float_min.text,
+            column_name
+        )
+        self.bind_cleaning_config_update(
+            float_max.textChanged,
+            Configuration.FLOAT_MAX,
+            float_max.text,
+            column_name
+        )
+        self.bind_cleaning_config_update(
+            string_max.textChanged,
+            Configuration.STRING_MAX,
+            string_max.text,
+            column_name
+        )
+        self.bind_cleaning_config_update(
+            date_min.dateChanged,
+            Configuration.DATE_MIN,
+            date_min.text,
+            column_name
+        )
+        self.bind_cleaning_config_update(
+            date_max.dateChanged,
+            Configuration.DATE_MAX,
+            date_max.text,
+            column_name
+        )
+        self.bind_cleaning_config_update(
+            categories.textChanged,
+            Configuration.CATEGORIES,
+            categories.toPlainText,
+            column_name
+        )
 
         return container
 
@@ -402,15 +485,43 @@ class AutoCleanView(AbstractView):
         container.layout().addWidget(distribution_plot_checkbox)
         container.layout().addWidget(outlier_plot_checkbox)
 
-        # Map selectors for access to values and signals
-        self.analytics_column_config_map[column_name] = {
-            "distribution": distribution_plot_checkbox,
-            "outliers": outlier_plot_checkbox
-        }
-
-        # TODO: Connect options to changes in analytics config
+        # Connect selector signals to analysis configuration
+        self.bind_analysis_config_update(
+            distribution_plot_checkbox.checkStateChanged,
+            Configuration.ANALYZE_DISTRIBUTION,
+            distribution_plot_checkbox.isChecked,
+            column_name
+        )
+        self.bind_analysis_config_update(
+            outlier_plot_checkbox.checkStateChanged,
+            Configuration.ANALYZE_OUTLIERS,
+            outlier_plot_checkbox.isChecked,
+            column_name
+        )
 
         return container
+
+    def bind_cleaning_config_update(self, signal, config_key, config_value_getter, column=None):
+        """Binds the signal from a configuration selector to its corresponding
+        setting in the cleaning configuration."""
+        signal.connect(
+            lambda: self._view_model.set_cleaning_config(
+                config_key,
+                config_value_getter(),
+                column=column
+            )
+        )
+
+    def bind_analysis_config_update(self, signal, config_key, config_value_getter, column=None):
+        """Binds the signal from a configuration selector to its corresponding
+        setting in the analysis configuration."""
+        signal.connect(
+            lambda: self._view_model.set_analytics_config(
+                config_key,
+                config_value_getter(),
+                column=column
+            )
+        )
 
     def update_cleaning_config(self, cleaning_config: dict):
         self.cleaning_config = cleaning_config
@@ -430,7 +541,7 @@ class AutoCleanView(AbstractView):
     def update_stats(self, stats: dict):
         self.cleaning_stats = stats
 
-    def append_constraints_widget(self, container: QWidget, label_text: str, validator) -> QWidget:
+    def append_constraints_widget(self, container: QWidget, label_text: str, validator) -> QLineEdit:
         """Creates and appends a cleaning constraints label and input selector
         to the provided container. Returns the input widget for code access to
         changes and values."""
@@ -446,7 +557,7 @@ class AutoCleanView(AbstractView):
         # Return the input widget
         return input_box
 
-    def append_date_constraints_widget(self, container: QWidget, label_text: str) -> QWidget:
+    def append_date_constraints_widget(self, container: QWidget, label_text: str) -> QDateEdit:
         """Creates and appends a cleaning constraints label and input selector
         to the provided container. Returns the input widget for code access to
         changes and values. For use specifically with date fields."""
@@ -461,7 +572,7 @@ class AutoCleanView(AbstractView):
         # Return the input widget
         return input_box
 
-    def append_category_select_widget(self, container: QWidget, label_text: str) -> QWidget:
+    def append_category_select_widget(self, container: QWidget, label_text: str) -> QTextEdit:
         """Creates and appends a cleaning constraints label and input selector
         to the provided container. Returns the input widget for code access to
         changes and values. For use specifically with categorical fields."""
