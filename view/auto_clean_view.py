@@ -1,6 +1,6 @@
 import pandas as pd
 from PyQt6 import QtCore
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QDateTime, QDate
 from PyQt6.QtGui import QFont, QIntValidator, QDoubleValidator
 from PyQt6.QtWidgets import QLabel, QWidget, QVBoxLayout, QScrollArea, QSizePolicy, QComboBox, QHBoxLayout, \
     QButtonGroup, QRadioButton, QCheckBox, QPushButton, QProgressBar, QSplitter, QFrame, QStackedWidget, QLineEdit, \
@@ -565,6 +565,13 @@ class AutoCleanView(AbstractView):
         label.setFont(QFont(self.font, 10))
         input_box = QDateEdit()
         input_box.setFont(QFont(self.font, 10))
+        input_box.setDisplayFormat("yyyy-MM-dd")
+
+        # Set initial dates
+        if label_text == "Min:":
+            input_box.setDate(QDate(1970, 1, 1))
+        elif label_text == "Max:":
+            input_box.setDate(QDate.currentDate())
 
         container.layout().addWidget(label)
         container.layout().addWidget(input_box)
