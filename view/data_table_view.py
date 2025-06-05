@@ -58,7 +58,7 @@ class DataTableView(AbstractView):
         table_scroll_area = QScrollArea()
         table_scroll_area.setWidget(self.table_container)
         table_scroll_area.setWidgetResizable(True)
-        table_scroll_area.setMinimumWidth(500)
+        table_scroll_area.setMinimumWidth(900)
         table_scroll_area.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.table_container.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
 

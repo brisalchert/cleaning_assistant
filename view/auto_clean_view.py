@@ -1,9 +1,10 @@
 import pandas as pd
 from PyQt6 import QtCore
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QFont
+from PyQt6.QtGui import QFont, QIntValidator, QDoubleValidator
 from PyQt6.QtWidgets import QLabel, QWidget, QVBoxLayout, QScrollArea, QSizePolicy, QComboBox, QHBoxLayout, \
-    QButtonGroup, QRadioButton, QCheckBox, QPushButton, QProgressBar, QSplitter, QFrame
+    QButtonGroup, QRadioButton, QCheckBox, QPushButton, QProgressBar, QSplitter, QFrame, QStackedWidget, QLineEdit, \
+    QDateEdit, QTextEdit, QLayout
 from pandas import DataFrame
 
 from navigation import NavigationController
@@ -42,7 +43,7 @@ class AutoCleanView(AbstractView):
         configuration_scroll_area = QScrollArea()
         configuration_scroll_area.setWidget(self.configuration_container)
         configuration_scroll_area.setWidgetResizable(True)
-        configuration_scroll_area.setMinimumWidth(500)
+        configuration_scroll_area.setMinimumWidth(900)
         configuration_scroll_area.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.configuration_container.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
 
@@ -116,7 +117,6 @@ class AutoCleanView(AbstractView):
 
         # TODO: Connect buttons to config changes
         # Column-specific options
-        # TODO: Add category selection, numerical ranges, string length limits
         self.cleaning_column_options_label = QLabel("Column Options:")
         self.cleaning_column_options_label.setFont(QFont(self.font, 12))
         self.cleaning_column_config_container = QWidget()
@@ -140,19 +140,23 @@ class AutoCleanView(AbstractView):
         self.missingness_label.setFont(QFont(self.font, 12))
         self.drop_missing_button = QRadioButton("Drop missing values")
         self.drop_missing_button.setFont(QFont(self.font, 10))
-        self.impute_missing_button = QRadioButton("Impute missing values")
-        self.impute_missing_button.setFont(QFont(self.font, 10))
+        self.impute_missing_mean_button = QRadioButton("Impute missing values with mean")
+        self.impute_missing_mean_button.setFont(QFont(self.font, 10))
+        self.impute_missing_median_button = QRadioButton("Impute missing values with median")
+        self.impute_missing_median_button.setFont(QFont(self.font, 10))
         self.leave_missing_button = QRadioButton("Do not modify missing values")
         self.leave_missing_button.setFont(QFont(self.font, 10))
         self.missingness_button_group = QButtonGroup()
         self.missingness_button_group.addButton(self.drop_missing_button)
-        self.missingness_button_group.addButton(self.impute_missing_button)
+        self.missingness_button_group.addButton(self.impute_missing_mean_button)
+        self.missingness_button_group.addButton(self.impute_missing_median_button)
         self.missingness_button_group.addButton(self.leave_missing_button)
         self.missingness_button_group.setExclusive(True)
         self.leave_missing_button.setChecked(True)
         self.cleaning_config_container.layout().addWidget(self.missingness_label)
         self.cleaning_config_container.layout().addWidget(self.drop_missing_button)
-        self.cleaning_config_container.layout().addWidget(self.impute_missing_button)
+        self.cleaning_config_container.layout().addWidget(self.impute_missing_mean_button)
+        self.cleaning_config_container.layout().addWidget(self.impute_missing_median_button)
         self.cleaning_config_container.layout().addWidget(self.leave_missing_button)
 
         # Align layout items to the top
@@ -179,6 +183,14 @@ class AutoCleanView(AbstractView):
         self.analytics_column_config_container.layout().setSpacing(0)
         self.analytics_config_container.layout().addWidget(self.analytics_column_options_label)
         self.analytics_config_container.layout().addWidget(self.analytics_column_config_container)
+
+        # Missing values
+        self.missingness_analysis_label = QLabel("Missing values:")
+        self.missingness_analysis_label.setFont(QFont(self.font, 12))
+        self.missingness_plot_checkbox = QCheckBox("Analyze missingness pattern")
+        self.missingness_plot_checkbox.setFont(QFont(self.font, 10))
+        self.analytics_config_container.layout().addWidget(self.missingness_analysis_label)
+        self.analytics_config_container.layout().addWidget(self.missingness_plot_checkbox)
 
         # Categorical values
         self.category_analysis_label = QLabel("Category Analysis:")
@@ -295,26 +307,78 @@ class AutoCleanView(AbstractView):
 
     def create_cleaning_column_config_widget(self, column_name: str) -> QWidget:
         # Create row with dropdown for column data type
-        column_name_label = QLabel(f"{column_name} data type: ")
+        column_name_label = QLabel(f"\"{column_name}\" data type: ")
         column_name_label.setFont(QFont(self.font, 10))
 
         data_type_select = QComboBox()
         data_type_select.setFont(QFont(self.font, 10))
         data_type_select.addItem("int")
-        data_type_select.addItem("float")
+        data_type_select.addItem("double")
         data_type_select.addItem("string")
-        data_type_select.addItem("datetime")
+        data_type_select.addItem("date")
         data_type_select.addItem("category")
+        data_type_select.addItem("object")
+
+        # Integer range constraints
+        int_range_container = QWidget()
+        int_range_container.setLayout(QHBoxLayout())
+        int_min = self.append_constraints_widget(int_range_container, "Min:", QIntValidator())
+        int_max = self.append_constraints_widget(int_range_container, "Max:", QIntValidator())
+
+        # Double range constraints
+        double_range_container = QWidget()
+        double_range_container.setLayout(QHBoxLayout())
+        double_min = self.append_constraints_widget(double_range_container, "Min:", QDoubleValidator())
+        double_max = self.append_constraints_widget(double_range_container, "Max:", QDoubleValidator())
+
+        # String length constraints
+        string_length_container = QWidget()
+        string_length_container.setLayout(QHBoxLayout())
+        string_max = self.append_constraints_widget(string_length_container, "Max Character Length:", QIntValidator())
+
+        # Date Constraints
+        date_range_container = QWidget()
+        date_range_container.setLayout(QHBoxLayout())
+        date_min = self.append_date_constraints_widget(date_range_container, "Min:")
+        date_max = self.append_date_constraints_widget(date_range_container, "Max:")
+
+        # Category List
+        category_names_container = QWidget()
+        category_names_container.setLayout(QHBoxLayout())
+        categories = self.append_category_select_widget(category_names_container, "Categories:")
+
+        # Stacked widget for data type cleaning options
+        data_type_config_stack = QStackedWidget()
+        data_type_config_stack.setLayout(QHBoxLayout())
+        data_type_config_stack.layout().addWidget(int_range_container)
+        data_type_config_stack.layout().addWidget(double_range_container)
+        data_type_config_stack.layout().addWidget(string_length_container)
+        data_type_config_stack.layout().addWidget(date_range_container)
+        data_type_config_stack.layout().addWidget(category_names_container)
+        data_type_config_stack.layout().addWidget(QWidget()) # Empty for "Object" type
+
+        # Connect selector to changes in stacked widget display
+        data_type_select.currentIndexChanged.connect(data_type_config_stack.setCurrentIndex)
 
         container = QWidget()
-        container.setLayout(QHBoxLayout())
+        container.setLayout(QVBoxLayout())
         container.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         container.layout().addWidget(column_name_label)
-        container.layout().addStretch()
         container.layout().addWidget(data_type_select)
+        container.layout().addWidget(data_type_config_stack)
 
-        # Map column name to its data type selector
-        self.cleaning_column_config_map[column_name] = data_type_select
+        # Map selectors for access to values and signals
+        self.cleaning_column_config_map[column_name] = {
+            "type_selector": data_type_select,
+            "int_min": int_min,
+            "int_max": int_max,
+            "double_min": double_min,
+            "double_max": double_max,
+            "string_max": string_max,
+            "date_min": date_min,
+            "date_max": date_max,
+            "categories": categories
+        }
 
         # TODO: Connect selector to changes in cleaning config
 
@@ -322,14 +386,11 @@ class AutoCleanView(AbstractView):
 
     def create_analytics_column_config_widget(self, column_name: str) -> QWidget:
         # Create row with checkboxes for analytics options
-        column_name_label = QLabel(f"{column_name}:")
+        column_name_label = QLabel(f"\"{column_name}\":")
         column_name_label.setFont(QFont(self.font, 10))
 
         distribution_plot_checkbox = QCheckBox("Analyze data distribution")
         distribution_plot_checkbox.setFont(QFont(self.font, 10))
-
-        missingness_plot_checkbox = QCheckBox("Analyze missingness pattern")
-        missingness_plot_checkbox.setFont(QFont(self.font, 10))
 
         outlier_plot_checkbox = QCheckBox("Analyze outliers")
         outlier_plot_checkbox.setFont(QFont(self.font, 10))
@@ -339,15 +400,13 @@ class AutoCleanView(AbstractView):
         container.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         container.layout().addWidget(column_name_label)
         container.layout().addWidget(distribution_plot_checkbox)
-        container.layout().addWidget(missingness_plot_checkbox)
         container.layout().addWidget(outlier_plot_checkbox)
 
-        # Map column name to analytics options
-        self.analytics_column_config_map[column_name] = [
-            distribution_plot_checkbox,
-            missingness_plot_checkbox,
-            outlier_plot_checkbox
-        ]
+        # Map selectors for access to values and signals
+        self.analytics_column_config_map[column_name] = {
+            "distribution": distribution_plot_checkbox,
+            "outliers": outlier_plot_checkbox
+        }
 
         # TODO: Connect options to changes in analytics config
 
@@ -370,3 +429,49 @@ class AutoCleanView(AbstractView):
 
     def update_stats(self, stats: dict):
         self.cleaning_stats = stats
+
+    def append_constraints_widget(self, container: QWidget, label_text: str, validator) -> QWidget:
+        """Creates and appends a cleaning constraints label and input selector
+        to the provided container. Returns the input widget for code access to
+        changes and values."""
+        label = QLabel(label_text)
+        label.setFont(QFont(self.font, 10))
+        input_box = QLineEdit()
+        input_box.setFont(QFont(self.font, 10))
+        input_box.setValidator(validator)
+
+        container.layout().addWidget(label)
+        container.layout().addWidget(input_box)
+
+        # Return the input widget
+        return input_box
+
+    def append_date_constraints_widget(self, container: QWidget, label_text: str) -> QWidget:
+        """Creates and appends a cleaning constraints label and input selector
+        to the provided container. Returns the input widget for code access to
+        changes and values. For use specifically with date fields."""
+        label = QLabel(label_text)
+        label.setFont(QFont(self.font, 10))
+        input_box = QDateEdit()
+        input_box.setFont(QFont(self.font, 10))
+
+        container.layout().addWidget(label)
+        container.layout().addWidget(input_box)
+
+        # Return the input widget
+        return input_box
+
+    def append_category_select_widget(self, container: QWidget, label_text: str) -> QWidget:
+        """Creates and appends a cleaning constraints label and input selector
+        to the provided container. Returns the input widget for code access to
+        changes and values. For use specifically with categorical fields."""
+        label = QLabel(label_text)
+        label.setFont(QFont(self.font, 10))
+        input_box = QTextEdit()
+        input_box.setFont(QFont(self.font, 10))
+
+        container.layout().addWidget(label)
+        container.layout().addWidget(input_box)
+
+        # Return the input widget
+        return input_box
