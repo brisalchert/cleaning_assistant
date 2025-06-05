@@ -75,7 +75,6 @@ class AutoCleanViewModel(ViewModel):
         self._cleaning_config = {
             Configuration.COLUMNS: {},
             Configuration.DELETE_DUPLICATES: False,
-            Configuration.MERGE_DUPLICATES: False,
             Configuration.DROP_MISSING: False,
             Configuration.IMPUTE_MISSING_MEAN: False,
             Configuration.IMPUTE_MISSING_MEDIAN: False

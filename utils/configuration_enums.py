@@ -17,7 +17,6 @@ class Configuration(Enum):
 
     # General cleaning options
     DELETE_DUPLICATES = "DeleteDuplicates"
-    MERGE_DUPLICATES = "MergeDuplicates"
     DROP_MISSING = "DropMissing"
     IMPUTE_MISSING_MEAN = "ImputeMissingMean"
     IMPUTE_MISSING_MEDIAN = "ImputeMissingMedian"

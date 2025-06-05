@@ -49,6 +49,8 @@ class AutoCleanView(AbstractView):
         # Run button and progress bar
         self.run_button = QPushButton("Run Current Configuration")
         self.run_button.setFont(QFont(self.font, 12))
+        self.run_button.setEnabled(False)
+        self.run_button.clicked.connect(lambda: self._view_model.data_cleaning_service.calculate_missingness("app_id"))
         self.progress_bar_label = QLabel("Waiting to run...")
         self.progress_bar_label.setFont(QFont(self.font, 10))
         self.progress_bar = QProgressBar()
@@ -73,6 +75,28 @@ class AutoCleanView(AbstractView):
         statistics_scroll_area.setMinimumWidth(300)
         statistics_scroll_area.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.statistics_container.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+
+        # Create statistics labels
+        self.statistics_label = QLabel("Cleaning Statistics:")
+        self.statistics_label.setFont(QFont(self.font, 14))
+        self.records_cleaned_label = QLabel("Records Cleaned: 0")
+        self.records_cleaned_label.setFont(QFont(self.font, 12))
+        self.data_types_label = QLabel("Data Types Converted: 0")
+        self.data_types_label.setFont(QFont(self.font, 12))
+        self.duplicates_label = QLabel("Duplicates Removed: 0")
+        self.duplicates_label.setFont(QFont(self.font, 12))
+        self.values_dropped = QLabel("Missing Values Dropped: 0")
+        self.values_dropped.setFont(QFont(self.font, 12))
+        self.values_imputed = QLabel("Missing Values Imputed: 0")
+        self.values_imputed.setFont(QFont(self.font, 12))
+
+        self.statistics_container.layout().addWidget(self.statistics_label)
+        self.statistics_container.layout().addWidget(self.records_cleaned_label)
+        self.statistics_container.layout().addWidget(self.data_types_label)
+        self.statistics_container.layout().addWidget(self.duplicates_label)
+        self.statistics_container.layout().addWidget(self.values_dropped)
+        self.statistics_container.layout().addWidget(self.values_imputed)
+        self.statistics_container.layout().addStretch()
 
         # Group scroll areas with splitter
         self.splitter = QSplitter(QtCore.Qt.Orientation.Horizontal)
@@ -127,22 +151,13 @@ class AutoCleanView(AbstractView):
         self.uniqueness_label.setFont(QFont(self.font, 12))
         self.delete_duplicates_checkbox = QCheckBox("Delete exact duplicates")
         self.delete_duplicates_checkbox.setFont(QFont(self.font, 10))
-        self.merge_duplicates_checkbox = QCheckBox("Merge almost exact duplicates")
-        self.merge_duplicates_checkbox.setFont(QFont(self.font, 10))
         self.cleaning_config_container.layout().addWidget(self.uniqueness_label)
         self.cleaning_config_container.layout().addWidget(self.delete_duplicates_checkbox)
-        self.cleaning_config_container.layout().addWidget(self.merge_duplicates_checkbox)
 
         self.bind_cleaning_config_update(
             self.delete_duplicates_checkbox.checkStateChanged,
             Configuration.DELETE_DUPLICATES,
             self.delete_duplicates_checkbox.isChecked
-        )
-
-        self.bind_cleaning_config_update(
-            self.merge_duplicates_checkbox.checkStateChanged,
-            Configuration.MERGE_DUPLICATES,
-            self.merge_duplicates_checkbox.isChecked
         )
 
         # Missing Values
@@ -312,7 +327,13 @@ class AutoCleanView(AbstractView):
 
     def update_table_select(self, tables: dict):
         self.table_select.clear()
-        self.table_select.addItems(tables.keys())
+
+        if tables:
+            self.table_select.addItems(tables.keys())
+            self.run_button.setEnabled(True)
+        else:
+            self.run_button.setEnabled(False)
+
         self.table_select.updateGeometry()
 
     @QtCore.pyqtSlot(dict)
@@ -575,7 +596,7 @@ class AutoCleanView(AbstractView):
 
         # Set initial dates
         if label_text == "Min:":
-            input_box.setDate(QDate(1970, 1, 1))
+            input_box.setDate(QDate(1900, 1, 1))
         elif label_text == "Max:":
             input_box.setDate(QDate.currentDate())
 
