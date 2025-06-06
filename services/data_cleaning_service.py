@@ -62,7 +62,20 @@ class DataCleaningService(AbstractService, ModelEditor):
 
     def set_data_type(self, column: str, data_type: str):
         if self._table[column].dtype != data_type:
-            self._table[column] = self._table[column].astype(data_type)
+            if data_type == "int64":
+                self._table[column] = pd.to_numeric(self._table[column], errors="coerce")
+                try:
+                    self._table[column] = self._table[column].astype("int64")
+                except ValueError:
+                    # Use nullable integer data type
+                    self._table[column] = self._table[column].astype("Int64")
+            elif data_type == "float64":
+                self._table[column] = pd.to_numeric(self._table[column], errors="coerce")
+                self._table[column] = self._table[column].astype(data_type)
+            elif data_type == "datetime64[ns]":
+                self._table[column] = pd.to_datetime(self._table[column], errors="coerce")
+            else:
+                self._table[column] = self._table[column].astype(data_type)
             self._model.set_table(self._table_name, self._table)
 
     def impute_missing_mean(self, column: str):
