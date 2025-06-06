@@ -1,4 +1,5 @@
-import io
+import subprocess
+from pathlib import Path
 
 import pandas as pd
 from fuzzywuzzy import process
@@ -6,6 +7,7 @@ from pandas import Series, DataFrame
 
 from model import DataModel
 from services import AbstractService, ModelEditor
+from utils import Configuration
 
 
 class DataCleaningService(AbstractService, ModelEditor):
@@ -14,8 +16,8 @@ class DataCleaningService(AbstractService, ModelEditor):
         return self._model
 
     @property
-    def cleaningScript(self) -> io.TextIOWrapper:
-        return self._cleaningScript
+    def cleaning_script(self) -> str:
+        return self._cleaning_script
 
     @property
     def table_name(self) -> str:
@@ -27,7 +29,7 @@ class DataCleaningService(AbstractService, ModelEditor):
 
     def __init__(self, model: DataModel):
         self._model = model
-        self._cleaningScript = None
+        self._cleaning_script = None
         self._table_name = None
         self._table: DataFrame = pd.DataFrame()
 
@@ -49,7 +51,7 @@ class DataCleaningService(AbstractService, ModelEditor):
 
     def set_and_retrieve_table(self, table_name: str) -> dict:
         self._table_name = table_name
-        self._table = self._model._database[table_name]
+        self._table = self._model.get_table(table_name)
         return {table_name: self._table}
 
     def calculate_missingness(self, column: str):
@@ -97,8 +99,8 @@ class DataCleaningService(AbstractService, ModelEditor):
     def get_data_type(self, column: str):
         return self._table[column].dtype
 
-    def drop_duplicates(self, column: str):
-        self._table[column] = self._table[column].drop_duplicates()
+    def drop_duplicates(self):
+        self._table = self._table.drop_duplicates()
         self._model.set_table(self._table_name, self._table)
 
     def get_outliers(self, column: str) -> DataFrame:
@@ -115,17 +117,89 @@ class DataCleaningService(AbstractService, ModelEditor):
         self._table = self._table[(self._table[column] > minimum) & (self._table[column] < maximum)]
         self._model.set_table(self._table_name, self._table)
 
-    def set_cleaning_script(self, script: io.TextIOWrapper):
-        # TODO: Implement set_cleaning_script
-        pass
+    def set_cleaning_script(self, script: str):
+        # Validate cleaning script before loading
+        if script.__contains__("# CLEANING ASSISTANT SCRIPT FILE"):
+            self._cleaning_script = script
 
-    def save_cleaning_script(self):
-        # TODO: Implement save_cleaning_script
-        pass
+    def generate_cleaning_script(self, config: dict):
+        """Generates a cleaning script for the current table and configuration."""
+        lines = [
+            "import pandas as pd",
+            "from fuzzywuzzy import process",
+            "def correct_spelling(row, categories: list):",
+            "\tmatch = process.extractOne(row, categories)",
+            "\tif match[1] >= 80:",
+            "\t\treturn match[0]",
+            "\telse:",
+            "\t\treturn row",
+            f"df = pd.read_csv({repr(self._table.to_csv(f"{self._table_name}.csv"))})"
+        ]
 
-    def apply_cleaning_script(self):
-        # TODO: Implement apply_cleaning_script
-        pass
+        # Column-specific cleaning
+        for column, options in config[Configuration.COLUMNS].items():
+            for key, value in options.items():
+                if key == Configuration.DATA_TYPE:
+                    if self._table[column].dtype != value:
+                        lines.append(f"df[{column}] = df[{column}].astype({value})")
+                elif key == Configuration.INT_MIN:
+                    lines.append(f"df[{column}] = df[df[{column}] >= {value}]")
+                elif key == Configuration.INT_MAX:
+                    lines.append(f"df[{column}] = df[df[{column}] <= {value}]")
+                elif key == Configuration.FLOAT_MIN:
+                    lines.append(f"df[{column}] = df[df[{column}] >= {value}]")
+                elif key == Configuration.FLOAT_MAX:
+                    lines.append(f"df[{column}] = df[df[{column}] <= {value}]")
+                elif key == Configuration.STRING_MAX:
+                    lines.append(f"df[{column}] = df[{column}].str.slice(0, {value})")
+                elif key == Configuration.DATE_MIN:
+                    lines.append(f"df[{column}] = df[df[{column}] >= {value}]")
+                elif key == Configuration.DATE_MAX:
+                    lines.append(f"df[{column}] = df[df[{column}] <= {value}]")
+                elif key == Configuration.CATEGORIES:
+                    lines.append(f"df[{column}] = df[{column}].apply(lambda row: correct_spelling(row, {value}))")
+                    lines.append(f"df[{column}] = df[{column}].astype('category')")
+
+        # General cleaning options
+        if config[Configuration.DELETE_DUPLICATES]:
+            lines.append(f"df = df.drop_duplicates()")
+
+        if config[Configuration.DROP_MISSING]:
+            lines.append(f"df = df.dropna()")
+        elif config[Configuration.IMPUTE_MISSING_MEAN]:
+            for column in self._table.columns:
+                lines.append(f"df[{column}] = df[{column}].fillna(df[{column}].mean())")
+        elif config[Configuration.IMPUTE_MISSING_MEDIAN]:
+            for column in self._table.columns:
+                lines.append(f"df[{column}] = df[{column}].fillna(df[{column}].median())")
+
+        lines.append(f"df.to_csv('{self._table_name}.csv', index=False)")
+        lines.append(f"print('Output saved to {self._table_name}.csv')")
+        lines.append("# CLEANING ASSISTANT SCRIPT FILE")
+
+        self._cleaning_script = "\n".join(lines)
+
+    def save_cleaning_script(self, file_path: str):
+        file = Path(file_path)
+        file.write_text(self._cleaning_script)
+
+    def apply_cleaning_script(self, script_path: str):
+        content = ""
+
+        with open(script_path, "r") as file:
+            content = file.read()
+
+        lines = content.splitlines()
+        if not lines[-1].startswith("# CLEANING ASSISTANT SCRIPT FILE"):
+            return
+
+        result = subprocess.run(
+            ["python", script_path],
+            capture_output=True,
+            text=True
+        )
+        # TODO: Connect output with messaging in view (use a new worker)
+        print("Result: ", result.stdout)
 
 def correct_spelling(row, categories: list):
     """Support function for correcting category spelling errors"""

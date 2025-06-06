@@ -122,7 +122,3 @@ class DatabaseService(AbstractService, DatabaseAccess, ModelEditor):
         self._model.set_database(tables)
 
         return True
-
-    def reset_data(self):
-        # TODO: Implement reset_data
-        pass

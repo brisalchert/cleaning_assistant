@@ -92,10 +92,8 @@ class AutoCleanViewModel(ViewModel):
         # TODO: Implement run_current_config
         pass
 
-    def load_script_from_file(self, script: io.TextIOWrapper):
-        # TODO: Implement load_script_from_file
-        pass
+    def run_script_from_file(self, script_path: str):
+        self.data_cleaning_service.apply_cleaning_script(script_path)
 
-    def save_config_to_file(self):
-        # TODO: Implement save_config_to_file
-        pass
+    def save_config_to_file(self, file_path: str):
+        self.data_cleaning_service.save_cleaning_script(file_path)
