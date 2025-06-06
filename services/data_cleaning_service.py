@@ -42,6 +42,7 @@ class DataCleaningService(AbstractService, ModelEditor):
         return self._model.read_row(table_name, primary_key)
 
     def update_row(self, table_name: str, primary_key: str, columns: dict) -> bool:
+        # TODO: FIX THIS
         return self._model.update_row(table_name, primary_key, columns)
 
     def delete_row(self, table_name: str, primary_key: str) -> Series:
@@ -59,17 +60,33 @@ class DataCleaningService(AbstractService, ModelEditor):
 
         return missing.sum()
 
+    def set_data_type(self, column: str, data_type: str):
+        if self._table[column].dtype != data_type:
+            self._table[column] = self._table[column].astype(data_type)
+            self._model.set_table(self._table_name, self._table)
 
     def impute_missing_mean(self, column: str):
-        self._table = self._table[column].fillna(self._table[column].mean())
+        self._table[column] = self._table[column].fillna(self._table[column].mean())
         self._model.set_table(self._table_name, self._table)
+
+    def impute_missing_mean_all(self):
+        for column in self._table.columns:
+            self.impute_missing_mean(column)
 
     def impute_missing_median(self, column: str):
-        self._table = self._table[column].fillna(self._table[column].median())
+        self._table[column] = self._table[column].fillna(self._table[column].median())
         self._model.set_table(self._table_name, self._table)
 
+    def impute_missing_median_all(self):
+        for column in self._table.columns:
+            self.impute_missing_mean(column)
+
     def drop_missing(self, column: str):
-        self._table = self._table[column].dropna()
+        self._table[column] = self._table[column].dropna()
+        self._model.set_table(self._table_name, self._table)
+
+    def drop_missing_all(self):
+        self._table = self._table.dropna()
         self._model.set_table(self._table_name, self._table)
 
     def get_categories(self, column: str):
@@ -90,6 +107,10 @@ class DataCleaningService(AbstractService, ModelEditor):
 
     def trim_strings(self, column: str):
         self._table[column] = self._table[column].str.strip()
+        self._model.set_table(self._table_name, self._table)
+
+    def truncate_strings(self, column: str, max_length: int):
+        self._table[column] = self._table[column].str.slice(0, max_length)
         self._model.set_table(self._table_name, self._table)
 
     def rename_column(self, column: str, new_name: str):
@@ -114,8 +135,13 @@ class DataCleaningService(AbstractService, ModelEditor):
         if minimum is None or maximum is None:
             minimum, maximum = self._table[column].quantile(0.01), self._table[column].quantile(0.99)
 
-        self._table = self._table[(self._table[column] > minimum) & (self._table[column] < maximum)]
+        self._table = self._table[(self._table[column] >= minimum) & (self._table[column] <= maximum)]
         self._model.set_table(self._table_name, self._table)
+
+    def drop_date_outliers(self, column: str, minimum = None, maximum = None):
+        if minimum is not None and maximum is not None:
+            self._table[column] = self._table[(self._table[column] >= minimum) & (self._table[column] <= maximum)]
+            self._model.set_table(self._table_name, self._table)
 
     def set_cleaning_script(self, script: str):
         # Validate cleaning script before loading
@@ -133,7 +159,7 @@ class DataCleaningService(AbstractService, ModelEditor):
             "\t\treturn match[0]",
             "\telse:",
             "\t\treturn row",
-            f"df = pd.read_csv({repr(self._table.to_csv(f"{self._table_name}.csv"))})"
+            f"df = pd.read_csv({self._table_name}.csv)"
         ]
 
         # Column-specific cleaning

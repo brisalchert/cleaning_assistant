@@ -1,10 +1,10 @@
 import pandas as pd
 from PyQt6 import QtCore
-from PyQt6.QtCore import Qt, QDateTime, QDate
+from PyQt6.QtCore import Qt, QDate
 from PyQt6.QtGui import QFont, QIntValidator, QDoubleValidator
 from PyQt6.QtWidgets import QLabel, QWidget, QVBoxLayout, QScrollArea, QSizePolicy, QComboBox, QHBoxLayout, \
     QButtonGroup, QRadioButton, QCheckBox, QPushButton, QProgressBar, QSplitter, QFrame, QStackedWidget, QLineEdit, \
-    QDateEdit, QTextEdit, QLayout
+    QDateEdit, QTextEdit, QMessageBox
 from pandas import DataFrame
 
 from navigation import NavigationController
@@ -28,12 +28,8 @@ class AutoCleanView(AbstractView):
         self._nav_controller = nav_controller
         self.table_name: str = ""
         self.table: DataFrame = pd.DataFrame()
-        self.cleaning_config: dict = {}
-        self.analytics_config: dict = {}
-        self.cleaning_running: bool = False
-        self.progress: float = 0
-        self.current_step: str = ""
         self.cleaning_stats: dict = {}
+        self.cleaning_running = None
 
         # Set up scroll area for configuration options
         self.configuration_container = QWidget()
@@ -50,7 +46,7 @@ class AutoCleanView(AbstractView):
         self.run_button = QPushButton("Run Current Configuration")
         self.run_button.setFont(QFont(self.font, 12))
         self.run_button.setEnabled(False)
-        self.run_button.clicked.connect(lambda: self._view_model.data_cleaning_service.calculate_missingness("app_id"))
+        self.run_button.clicked.connect(self._view_model.run_current_config)
         self.progress_bar_label = QLabel("Waiting to run...")
         self.progress_bar_label.setFont(QFont(self.font, 10))
         self.progress_bar = QProgressBar()
@@ -117,7 +113,7 @@ class AutoCleanView(AbstractView):
         self.table_select_label.setFont(QFont(self.font, 14))
         self.table_select = QComboBox()
         self.table_select.setFont(QFont(self.font, 12))
-        self.table_select.currentIndexChanged.connect(lambda: self._view_model.set_table(self.table_select.currentText()))
+        self.table_select.currentIndexChanged.connect(self.change_table)
         self.table_select_container = QWidget()
         self.table_select_container.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Preferred)
         self.table_select_container.setLayout(QHBoxLayout())
@@ -157,7 +153,8 @@ class AutoCleanView(AbstractView):
         self.bind_cleaning_config_update(
             self.delete_duplicates_checkbox.checkStateChanged,
             Configuration.DELETE_DUPLICATES,
-            self.delete_duplicates_checkbox.isChecked
+            self.delete_duplicates_checkbox.isChecked,
+            True
         )
 
         # Missing Values
@@ -187,19 +184,22 @@ class AutoCleanView(AbstractView):
         self.bind_cleaning_config_update(
             self.drop_missing_button.toggled,
             Configuration.DROP_MISSING,
-            self.drop_missing_button.isChecked
+            self.drop_missing_button.isChecked,
+            True
         )
 
         self.bind_cleaning_config_update(
             self.impute_missing_mean_button.toggled,
             Configuration.IMPUTE_MISSING_MEAN,
-            self.impute_missing_mean_button.isChecked
+            self.impute_missing_mean_button.isChecked,
+            True
         )
 
         self.bind_cleaning_config_update(
             self.impute_missing_median_button.toggled,
             Configuration.IMPUTE_MISSING_MEDIAN,
-            self.impute_missing_median_button.isChecked
+            self.impute_missing_median_button.isChecked,
+            True
         )
 
         # Align layout items to the top
@@ -238,7 +238,8 @@ class AutoCleanView(AbstractView):
         self.bind_analysis_config_update(
             self.missingness_plot_checkbox.checkStateChanged,
             Configuration.ANALYZE_MISSINGNESS,
-            self.missingness_plot_checkbox.isChecked
+            self.missingness_plot_checkbox.isChecked,
+            True
         )
 
         # Categorical values
@@ -252,7 +253,8 @@ class AutoCleanView(AbstractView):
         self.bind_analysis_config_update(
             self.category_analysis_checkbox.checkStateChanged,
             Configuration.ANALYZE_CATEGORIES,
-            self.category_analysis_checkbox.isChecked
+            self.category_analysis_checkbox.isChecked,
+            True
         )
 
         # Unit uniformity for numerical values
@@ -266,7 +268,8 @@ class AutoCleanView(AbstractView):
         self.bind_analysis_config_update(
             self.unit_uniformity_checkbox.checkStateChanged,
             Configuration.ANALYZE_UNITS,
-            self.unit_uniformity_checkbox.isChecked
+            self.unit_uniformity_checkbox.isChecked,
+            True
         )
 
         # Align layout items to the top
@@ -311,9 +314,9 @@ class AutoCleanView(AbstractView):
         self._view_model.nav_destination_changed.connect(self.navigate)
         self._view_model.tables_loaded.connect(self.update_table_select)
         self._view_model.table_changed.connect(self.update_column_options)
-        self._view_model.cleaning_config_changed.connect(self.update_cleaning_config)
-        self._view_model.analytics_config_changed.connect(self.update_analytics_config)
         self._view_model.cleaning_running_changed.connect(self.update_running)
+        self._view_model.cleaning_finished.connect(self.on_cleaning_finished)
+        self._view_model.cleaning_error.connect(self.show_error_dialog)
         self._view_model.progress_updated.connect(self.update_progress)
         self._view_model.current_step_changed.connect(self.update_step)
         self._view_model.cleaning_stats_updated.connect(self.update_stats)
@@ -335,6 +338,12 @@ class AutoCleanView(AbstractView):
             self.run_button.setEnabled(False)
 
         self.table_select.updateGeometry()
+
+    def change_table(self, table_select_index):
+        if not self.cleaning_running:
+            self._view_model.init_cleaning_config()
+            self._view_model.init_analytics_config()
+            self._view_model.set_table(self.table_select.currentText())
 
     @QtCore.pyqtSlot(dict)
     def update_column_options(self, table: dict):
@@ -377,9 +386,12 @@ class AutoCleanView(AbstractView):
         data_type_select.addItem("float64")
         data_type_select.addItem("bool")
         data_type_select.addItem("string")
-        data_type_select.addItem("datetime64")
+        data_type_select.addItem("datetime64[ns]")
         data_type_select.addItem("category")
         data_type_select.addItem("object")
+
+        # Set initial data type
+        data_type_select.setCurrentText(str(self._view_model.data_cleaning_service.get_data_type(column_name)))
 
         # Integer range constraints
         int_range_container = QWidget()
@@ -435,7 +447,8 @@ class AutoCleanView(AbstractView):
             data_type_select.currentIndexChanged,
             Configuration.DATA_TYPE,
             data_type_select.currentText,
-            column_name
+            column_name,
+            True
         )
         self.bind_cleaning_config_update(
             int_min.textChanged,
@@ -511,18 +524,20 @@ class AutoCleanView(AbstractView):
             distribution_plot_checkbox.checkStateChanged,
             Configuration.ANALYZE_DISTRIBUTION,
             distribution_plot_checkbox.isChecked,
-            column_name
+            column_name,
+            True
         )
         self.bind_analysis_config_update(
             outlier_plot_checkbox.checkStateChanged,
             Configuration.ANALYZE_OUTLIERS,
             outlier_plot_checkbox.isChecked,
-            column_name
+            column_name,
+            True
         )
 
         return container
 
-    def bind_cleaning_config_update(self, signal, config_key, config_value_getter, column=None):
+    def bind_cleaning_config_update(self, signal, config_key, config_value_getter, column=None, update_on_init=False):
         """Binds the signal from a configuration selector to its corresponding
         setting in the cleaning configuration."""
         signal.connect(
@@ -533,10 +548,10 @@ class AutoCleanView(AbstractView):
             )
         )
 
-        # Call once when binding the signal to initialize the configuration
-        self._view_model.set_cleaning_config(config_key, config_value_getter(), column=column)
+        if update_on_init:
+            self._view_model.set_cleaning_config(config_key, config_value_getter(), column=column)
 
-    def bind_analysis_config_update(self, signal, config_key, config_value_getter, column=None):
+    def bind_analysis_config_update(self, signal, config_key, config_value_getter, column=None, update_on_init=False):
         """Binds the signal from a configuration selector to its corresponding
         setting in the analysis configuration."""
         signal.connect(
@@ -547,26 +562,34 @@ class AutoCleanView(AbstractView):
             )
         )
 
-        # Call once when binding the signal to initialize the configuration
-        self._view_model.set_analytics_config(config_key, config_value_getter(), column=column)
+        if update_on_init:
+            self._view_model.set_analytics_config(config_key, config_value_getter(), column=column)
 
-    def update_cleaning_config(self, cleaning_config: dict):
-        self.cleaning_config = cleaning_config
-
-    def update_analytics_config(self, analytics_config: dict):
-        self.analytics_config = analytics_config
+    def on_cleaning_finished(self, success: bool):
+        self.progress_bar_label.setText("Waiting to run...")
+        self.progress_bar.setValue(0)
 
     def update_running(self, running: bool):
         self.cleaning_running = running
+        self.run_button.setEnabled(not running)
 
     def update_progress(self, progress: float):
-        self.progress = progress
+        self.progress_bar.setValue(progress)
 
     def update_step(self, step: str):
-        self.current_step = step
+        self.progress_bar_label.setText(step)
 
     def update_stats(self, stats: dict):
-        self.cleaning_stats = stats
+        # TODO: Implement update_stats
+        pass
+
+    def show_error_dialog(self, error: str):
+        error_dialog = QMessageBox()
+        error_dialog.setWindowTitle("Cleaning Error")
+        error_dialog.setText("There was an error cleaning the data.")
+        error_dialog.setInformativeText(error)
+        error_dialog.setIcon(QMessageBox.Icon.Warning)
+        error_dialog.exec()
 
     def append_constraints_widget(self, container: QWidget, label_text: str, validator) -> QLineEdit:
         """Creates and appends a cleaning constraints label and input selector

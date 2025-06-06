@@ -1,9 +1,13 @@
 import pandas as pd
+from PyQt6.QtCore import QObject, pyqtSignal
 from pandas import DataFrame, Series
 
 
-class DataModel:
+class DataModel(QObject):
+    data_changed: pyqtSignal = pyqtSignal(dict)
+
     def __init__(self, database: dict[str, DataFrame] = None):
+        super().__init__()
         self._database = database
         self._observers = []
 
@@ -15,18 +19,11 @@ class DataModel:
 
     def set_database(self, database: dict[str, DataFrame]):
         self._database = database
-        self._notify_observers()
+        self.data_changed.emit(database)
 
     def set_table(self, table_name: str, table: DataFrame):
         self._database[table_name] = table
-        self._notify_observers()
-
-    def observe(self, callback):
-        self._observers.append(callback)
-
-    def _notify_observers(self):
-        for callback in self._observers:
-            callback(self._database)
+        self.data_changed.emit(self._database)
 
     def create_row(self, table_name: str, columns: dict) -> bool:
         # Check for the table in the database
@@ -41,7 +38,7 @@ class DataModel:
             print(f"Error adding row to table {table_name}: {e}")
             return False
 
-        self._notify_observers()
+        self.data_changed.emit(self._database)
 
         return True
 
@@ -64,7 +61,7 @@ class DataModel:
             return False
         else:
             self._database[table_name].update(new_row_df)
-            self._notify_observers()
+            self.data_changed.emit(self._database)
             return True
 
     def delete_row(self, table_name: str, primary_key: str) -> Series:
@@ -78,6 +75,6 @@ class DataModel:
         if not removed_row.empty:
             self._database[table_name].drop(primary_key, inplace=True)
 
-        self._notify_observers()
+        self.data_changed.emit(self._database)
 
         return removed_row

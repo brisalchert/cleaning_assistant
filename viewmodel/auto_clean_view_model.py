@@ -1,19 +1,20 @@
-import io
-from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtCore import pyqtSignal, QThread
+
 from navigation import Screen
 from services import DataCleaningService, AnalyticsService, DatabaseService
 from utils import Configuration
 from viewmodel import ViewModel
+from workers import CleaningWorker
 
 
 class AutoCleanViewModel(ViewModel):
     nav_destination_changed: pyqtSignal = pyqtSignal(Screen)
     tables_loaded: pyqtSignal = pyqtSignal(dict)
     table_changed: pyqtSignal = pyqtSignal(dict)
-    cleaning_config_changed: pyqtSignal = pyqtSignal(dict)
-    analytics_config_changed: pyqtSignal = pyqtSignal(dict)
     cleaning_running_changed: pyqtSignal = pyqtSignal(bool)
-    progress_updated: pyqtSignal = pyqtSignal(float)
+    cleaning_finished: pyqtSignal = pyqtSignal(bool)
+    cleaning_error: pyqtSignal = pyqtSignal(str)
+    progress_updated: pyqtSignal = pyqtSignal(int)
     current_step_changed: pyqtSignal = pyqtSignal(str)
     cleaning_stats_updated: pyqtSignal = pyqtSignal(dict)
 
@@ -27,11 +28,11 @@ class AutoCleanViewModel(ViewModel):
         self._cleaning_config = None
         self._analytics_config = None
         self._cleaning_running = False
-        self._progress = None
-        self._current_step = None
+        self.worker = None
+        self.worker_thread = None
 
         # Connect to model updates
-        self.database_service.model.observe(self.tables_loaded.emit)
+        self.database_service.model.data_changed.connect(lambda database: self.tables_loaded.emit(database))
 
         # Initialize configurations
         self.init_cleaning_config()
@@ -55,8 +56,6 @@ class AutoCleanViewModel(ViewModel):
         else:
             self._cleaning_config[key] = value
 
-        self.cleaning_config_changed.emit(self._cleaning_config)
-
     def set_analytics_config(self, key: Configuration, value, column: str = None):
         if column:
             # Create dictionary for column if not present
@@ -69,7 +68,6 @@ class AutoCleanViewModel(ViewModel):
 
         # Update config in the analytics service
         self.analytics_service.set_analytics_config(self._analytics_config)
-        self.analytics_config_changed.emit(self._analytics_config)
 
     def init_cleaning_config(self):
         self._cleaning_config = {
@@ -88,9 +86,38 @@ class AutoCleanViewModel(ViewModel):
             Configuration.ANALYZE_UNITS: False
         }
 
+    def start_worker(self, on_finished, error_signal, progress_signal, step_signal):
+        self.worker_thread = QThread()
+        self.worker.moveToThread(self.worker_thread)
+
+        # Connect signals and slots
+        self.worker.finished.connect(on_finished)
+        self.worker.error.connect(error_signal.emit)
+        self.worker.progress.connect(progress_signal.emit)
+        self.worker.step.connect(step_signal.emit)
+
+        # Thread cleanup
+        self.worker.finished.connect(self.worker_thread.quit)
+        self.worker_thread.finished.connect(self.worker.deleteLater)
+        self.worker.finished.connect(self.worker_thread.deleteLater)
+
+        # Connect thread start to worker task
+        self.worker_thread.started.connect(self.worker.run)
+
+        # Start worker thread
+        self.worker_thread.start()
+
     def run_current_config(self):
-        # TODO: Implement run_current_config
-        pass
+        self._cleaning_running = True
+        self.cleaning_running_changed.emit(self._cleaning_running)
+
+        self.worker = CleaningWorker(self.data_cleaning_service, self._cleaning_config, self._analytics_config)
+        self.start_worker(self.on_run_finished, self.cleaning_error, self.progress_updated, self.current_step_changed)
+
+    def on_run_finished(self, success: bool):
+        self._cleaning_running = False
+        self.cleaning_running_changed.emit(self._cleaning_running)
+        self.cleaning_finished.emit(success)
 
     def run_script_from_file(self, script_path: str):
         self.data_cleaning_service.apply_cleaning_script(script_path)

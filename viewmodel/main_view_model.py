@@ -32,7 +32,7 @@ class MainViewModel(ViewModel):
         self.worker = None
 
         # Connect to model updates
-        self.database_service.model.observe(self.data_changed.emit)
+        self.database_service.model.data_changed.connect(self.data_changed.emit)
 
     def set_nav_destination(self, destination: Screen):
         self._nav_destination = destination

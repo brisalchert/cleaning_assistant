@@ -28,7 +28,7 @@ class DataViewerViewModel(ViewModel):
         self._query_result = None
 
         # Connect to model updates
-        self.data_editor_service.model.observe(self.on_database_update)
+        self.data_editor_service.model.data_changed.connect(self.on_database_update)
 
     def set_nav_destination(self, destination: Screen):
         self._nav_destination = destination
