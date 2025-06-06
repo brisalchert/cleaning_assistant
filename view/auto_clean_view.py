@@ -154,7 +154,7 @@ class AutoCleanView(AbstractView):
             self.delete_duplicates_checkbox.checkStateChanged,
             Configuration.DELETE_DUPLICATES,
             self.delete_duplicates_checkbox.isChecked,
-            True
+            update_on_init=True
         )
 
         # Missing Values
@@ -185,21 +185,21 @@ class AutoCleanView(AbstractView):
             self.drop_missing_button.toggled,
             Configuration.DROP_MISSING,
             self.drop_missing_button.isChecked,
-            True
+            update_on_init=True,
         )
 
         self.bind_cleaning_config_update(
             self.impute_missing_mean_button.toggled,
             Configuration.IMPUTE_MISSING_MEAN,
             self.impute_missing_mean_button.isChecked,
-            True
+            update_on_init=True
         )
 
         self.bind_cleaning_config_update(
             self.impute_missing_median_button.toggled,
             Configuration.IMPUTE_MISSING_MEDIAN,
             self.impute_missing_median_button.isChecked,
-            True
+            update_on_init=True
         )
 
         # Align layout items to the top
@@ -239,7 +239,7 @@ class AutoCleanView(AbstractView):
             self.missingness_plot_checkbox.checkStateChanged,
             Configuration.ANALYZE_MISSINGNESS,
             self.missingness_plot_checkbox.isChecked,
-            True
+            update_on_init=True
         )
 
         # Categorical values
@@ -254,7 +254,7 @@ class AutoCleanView(AbstractView):
             self.category_analysis_checkbox.checkStateChanged,
             Configuration.ANALYZE_CATEGORIES,
             self.category_analysis_checkbox.isChecked,
-            True
+            update_on_init=True
         )
 
         # Unit uniformity for numerical values
@@ -269,7 +269,7 @@ class AutoCleanView(AbstractView):
             self.unit_uniformity_checkbox.checkStateChanged,
             Configuration.ANALYZE_UNITS,
             self.unit_uniformity_checkbox.isChecked,
-            True
+            update_on_init=True
         )
 
         # Align layout items to the top
