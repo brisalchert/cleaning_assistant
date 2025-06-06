@@ -41,7 +41,7 @@ class CleaningWorker(QObject):
                         self.step.emit("Changing data types...")
                         types_changed = self.data_cleaning_service.set_data_type(column, value)
                         self.data_types_converted.emit(types_changed)
-                        self.cleaning_operations.emit(self.data_cleaning_service.get_table_length())
+                        self.cleaning_operations.emit(self.data_cleaning_service.get_table_length() * types_changed)
                         self.progress.emit(50)
                     elif key == Configuration.INT_MIN:
                         self.step.emit("Removing integer outliers...")

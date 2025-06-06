@@ -4,7 +4,7 @@ from PyQt6.QtCore import Qt, QDate
 from PyQt6.QtGui import QFont, QIntValidator, QDoubleValidator
 from PyQt6.QtWidgets import QLabel, QWidget, QVBoxLayout, QScrollArea, QSizePolicy, QComboBox, QHBoxLayout, \
     QButtonGroup, QRadioButton, QCheckBox, QPushButton, QProgressBar, QSplitter, QFrame, QStackedWidget, QLineEdit, \
-    QDateEdit, QTextEdit, QMessageBox
+    QDateEdit, QTextEdit, QMessageBox, QFileDialog
 from pandas import DataFrame
 
 from navigation import NavigationController
@@ -110,6 +110,20 @@ class AutoCleanView(AbstractView):
         # Set up view header
         self.header_label = QLabel("Auto-Cleaning Configuration")
         self.header_label.setFont(QFont(self.font, 24))
+        self.script_export_button = QPushButton("Export Cleaning Script")
+        self.script_export_button.setFont(QFont(self.font, 14))
+        self.script_export_button.setEnabled(False)
+        self.script_export_button.clicked.connect(self.on_script_export)
+        self.load_script_button = QPushButton("Load Cleaning Script")
+        self.load_script_button.setFont(QFont(self.font, 14))
+        self.load_script_button.clicked.connect(self.on_load_script)
+
+        self.header_group = QWidget()
+        self.header_group.setLayout(QHBoxLayout())
+        self.header_group.layout().addWidget(self.header_label)
+        self.header_group.layout().addStretch()
+        self.header_group.layout().addWidget(self.script_export_button)
+        self.header_group.layout().addWidget(self.load_script_button)
 
         # Table selection
         self.table_select_label = QLabel("Select a table for auto-cleaning: ")
@@ -303,7 +317,7 @@ class AutoCleanView(AbstractView):
         # Main Layout
         self.auto_clean_layout = QVBoxLayout()
         self.auto_clean_layout.addWidget(self._nav_bar)
-        self.auto_clean_layout.addWidget(self.header_label)
+        self.auto_clean_layout.addWidget(self.header_group)
         self.auto_clean_layout.addWidget(self.splitter)
 
         # ----------------------------------------------------------------------
@@ -571,6 +585,21 @@ class AutoCleanView(AbstractView):
     def on_cleaning_finished(self, success: bool):
         self.progress_bar_label.setText("Waiting to run...")
         self.progress_bar.setValue(0)
+        self.script_export_button.setEnabled(success)
+
+    def on_script_export(self):
+        export_dialog = QFileDialog()
+        directory = export_dialog.getExistingDirectory(self, "Select Directory", ".", QFileDialog.Option.ShowDirsOnly)
+
+        if directory:
+            self._view_model.save_config_to_file(directory)
+
+    def on_load_script(self):
+        load_dialog = QFileDialog()
+        script = load_dialog.getOpenFileName(self, "Select Script File", ".")
+
+        if script:
+            self._view_model.run_script_from_file(script[0])
 
     def update_running(self, running: bool):
         if running:

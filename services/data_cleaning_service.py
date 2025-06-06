@@ -240,7 +240,19 @@ class DataCleaningService(AbstractService, ModelEditor):
             for key, value in options.items():
                 if key == Configuration.DATA_TYPE:
                     if self._table[column].dtype != value:
-                        lines.append(f"df[{column}] = df[{column}].astype({value})")
+                        if value == "int64":
+                            lines.append(f"df[{column}] = pd.to_numeric(df[{column}], errors='coerce')")
+                            lines.append(f"try:")
+                            lines.append(f"\tdf[{column}] = df[{column}].astype({value})")
+                            lines.append(f"except ValueError:")
+                            lines.append(f"\tdf[{column}] = df[{column}].astype('Int64')")
+                        elif value == "float64":
+                            lines.append(f"df[{column}] = pd.to_numeric(df[{column}], errors='coerce')")
+                            lines.append(f"df[{column}] = df[{column}].astype('float64')")
+                        elif value == "datetime64[ns]":
+                            lines.append(f"df[{column}] = pd.to_datetime(df[{column}], errors='coerce')")
+                        else:
+                            lines.append(f"df[{column}] = df[{column}].astype({value})")
                 elif key == Configuration.INT_MIN:
                     lines.append(f"df[{column}] = df[df[{column}] >= {value}]")
                 elif key == Configuration.INT_MAX:
@@ -278,9 +290,12 @@ class DataCleaningService(AbstractService, ModelEditor):
 
         self._cleaning_script = "\n".join(lines)
 
-    def save_cleaning_script(self, file_path: str):
-        file = Path(file_path)
-        file.write_text(self._cleaning_script)
+    def save_cleaning_script(self, directory: str):
+        folder = Path(directory)
+        folder.mkdir(parents=True, exist_ok=True)
+
+        file_path = Path(f"{folder}/cleaning_script.py")
+        file_path.write_text(self._cleaning_script)
 
     def apply_cleaning_script(self, script_path: str):
         content = ""
