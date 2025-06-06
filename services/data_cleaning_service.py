@@ -60,7 +60,7 @@ class DataCleaningService(AbstractService, ModelEditor):
 
         return missing.sum()
 
-    def set_data_type(self, column: str, data_type: str):
+    def set_data_type(self, column: str, data_type: str) -> int:
         if self._table[column].dtype != data_type:
             if data_type == "int64":
                 self._table[column] = pd.to_numeric(self._table[column], errors="coerce")
@@ -78,29 +78,57 @@ class DataCleaningService(AbstractService, ModelEditor):
                 self._table[column] = self._table[column].astype(data_type)
             self._model.set_table(self._table_name, self._table)
 
-    def impute_missing_mean(self, column: str):
+            return 1
+
+        return 0
+
+    def impute_missing_mean(self, column: str) -> int:
+        before = self._table[column].isna().sum()
         self._table[column] = self._table[column].fillna(self._table[column].mean())
+        after = self._table[column].isna().sum()
         self._model.set_table(self._table_name, self._table)
 
-    def impute_missing_mean_all(self):
-        for column in self._table.columns:
-            self.impute_missing_mean(column)
+        return before - after
 
-    def impute_missing_median(self, column: str):
+    def impute_missing_mean_all(self) -> int:
+        before = self._table.isna().sum().sum()
+        self._table = self._table.fillna(self._table.mean(numeric_only=True))
+        after = self._table.isna().sum().sum()
+        self._model.set_table(self._table_name, self._table)
+
+        return before - after
+
+    def impute_missing_median(self, column: str) -> int:
+        before = self._table[column].isna().sum()
         self._table[column] = self._table[column].fillna(self._table[column].median())
+        after = self._table[column].isna().sum()
         self._model.set_table(self._table_name, self._table)
 
-    def impute_missing_median_all(self):
-        for column in self._table.columns:
-            self.impute_missing_mean(column)
+        return before - after
 
-    def drop_missing(self, column: str):
+    def impute_missing_median_all(self) -> int:
+        before = self._table.isna().sum().sum()
+        self._table = self._table.fillna(self._table.median(numeric_only=True))
+        after = self._table.isna().sum().sum()
+        self._model.set_table(self._table_name, self._table)
+
+        return before - after
+
+    def drop_missing(self, column: str) -> int:
+        before = len(self._table)
         self._table[column] = self._table[column].dropna()
+        after = len(self._table)
         self._model.set_table(self._table_name, self._table)
 
-    def drop_missing_all(self):
+        return before - after
+
+    def drop_missing_all(self) -> int:
+        before = len(self._table)
         self._table = self._table.dropna()
+        after = len(self._table)
         self._model.set_table(self._table_name, self._table)
+
+        return before - after
 
     def get_categories(self, column: str):
         if self._table[column].dtype == "category":
@@ -108,23 +136,39 @@ class DataCleaningService(AbstractService, ModelEditor):
         else:
             return self._table[column].unique()
 
-    def clean_categories(self, column: str, correction_map: dict):
+    def clean_categories(self, column: str, correction_map: dict) -> int:
+        original = self._table[column].copy()
         self._table[column] = self._table[column].replace(correction_map)
+        changed = self._table[column][original != self._table[column]].count()
         self._table[column] = self._table[column].astype("category")
         self._model.set_table(self._table_name, self._table)
 
-    def autocorrect_categories(self, column: str, correct_categories: list):
+        return changed
+
+    def autocorrect_categories(self, column: str, correct_categories: list) -> int:
+        original = self._table[column].copy()
         self._table[column] = self._table[column].apply(lambda row: correct_spelling(row, correct_categories))
+        changed = self._table[column][original != self._table[column]].count()
         self._table[column] = self._table[column].astype("category")
         self._model.set_table(self._table_name, self._table)
 
-    def trim_strings(self, column: str):
+        return changed
+
+    def trim_strings(self, column: str) -> int:
+        original = self._table[column].copy()
         self._table[column] = self._table[column].str.strip()
+        changed = self._table[column][original != self._table[column]].count()
         self._model.set_table(self._table_name, self._table)
 
-    def truncate_strings(self, column: str, max_length: int):
+        return changed
+
+    def truncate_strings(self, column: str, max_length: int) -> int:
+        original = self._table[column].copy()
         self._table[column] = self._table[column].str.slice(0, max_length)
+        changed = self._table[column][original != self._table[column]].count()
         self._model.set_table(self._table_name, self._table)
+
+        return changed
 
     def rename_column(self, column: str, new_name: str):
         self._table[column] = self._table[column].rename(new_name)
@@ -133,9 +177,16 @@ class DataCleaningService(AbstractService, ModelEditor):
     def get_data_type(self, column: str):
         return self._table[column].dtype
 
-    def drop_duplicates(self):
+    def get_table_length(self):
+        return self._table.shape[0]
+
+    def drop_duplicates(self) -> int:
+        before = len(self._table)
         self._table = self._table.drop_duplicates()
+        after = len(self._table)
         self._model.set_table(self._table_name, self._table)
+
+        return before - after
 
     def get_outliers(self, column: str) -> DataFrame:
         q_low = self._table[column].quantile(0.01)
@@ -144,17 +195,26 @@ class DataCleaningService(AbstractService, ModelEditor):
         df_outliers = self._table[(self._table[column] < q_low) | (self._table[column] > q_high)]
         return df_outliers
 
-    def drop_outliers(self, column: str, minimum: float = None, maximum: float = None):
+    def drop_outliers(self, column: str, minimum: float = None, maximum: float = None) -> int:
         if minimum is None or maximum is None:
             minimum, maximum = self._table[column].quantile(0.01), self._table[column].quantile(0.99)
 
+        before = len(self._table)
         self._table = self._table[(self._table[column] >= minimum) & (self._table[column] <= maximum)]
+        after = len(self._table)
         self._model.set_table(self._table_name, self._table)
 
-    def drop_date_outliers(self, column: str, minimum = None, maximum = None):
+        return before - after
+
+    def drop_date_outliers(self, column: str, minimum = None, maximum = None) -> int:
         if minimum is not None and maximum is not None:
+            before = len(self._table)
             self._table[column] = self._table[(self._table[column] >= minimum) & (self._table[column] <= maximum)]
+            after = len(self._table)
             self._model.set_table(self._table_name, self._table)
+
+            return before - after
+        return 0
 
     def set_cleaning_script(self, script: str):
         # Validate cleaning script before loading

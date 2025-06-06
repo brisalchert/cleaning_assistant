@@ -75,21 +75,24 @@ class AutoCleanView(AbstractView):
         # Create statistics labels
         self.statistics_label = QLabel("Cleaning Statistics:")
         self.statistics_label.setFont(QFont(self.font, 14))
-        self.records_cleaned_label = QLabel("Records Cleaned: 0")
-        self.records_cleaned_label.setFont(QFont(self.font, 12))
+        self.cleaning_operations_label = QLabel("Total Modifications: 0")
+        self.cleaning_operations_label.setFont(QFont(self.font, 12))
         self.data_types_label = QLabel("Data Types Converted: 0")
         self.data_types_label.setFont(QFont(self.font, 12))
         self.duplicates_label = QLabel("Duplicates Removed: 0")
         self.duplicates_label.setFont(QFont(self.font, 12))
+        self.outliers_label = QLabel("Outliers Removed: 0")
+        self.outliers_label.setFont(QFont(self.font, 12))
         self.values_dropped = QLabel("Missing Values Dropped: 0")
         self.values_dropped.setFont(QFont(self.font, 12))
         self.values_imputed = QLabel("Missing Values Imputed: 0")
         self.values_imputed.setFont(QFont(self.font, 12))
 
         self.statistics_container.layout().addWidget(self.statistics_label)
-        self.statistics_container.layout().addWidget(self.records_cleaned_label)
+        self.statistics_container.layout().addWidget(self.cleaning_operations_label)
         self.statistics_container.layout().addWidget(self.data_types_label)
         self.statistics_container.layout().addWidget(self.duplicates_label)
+        self.statistics_container.layout().addWidget(self.outliers_label)
         self.statistics_container.layout().addWidget(self.values_dropped)
         self.statistics_container.layout().addWidget(self.values_imputed)
         self.statistics_container.layout().addStretch()
@@ -570,6 +573,8 @@ class AutoCleanView(AbstractView):
         self.progress_bar.setValue(0)
 
     def update_running(self, running: bool):
+        if running:
+            self.reset_stats()
         self.cleaning_running = running
         self.run_button.setEnabled(not running)
 
@@ -580,8 +585,20 @@ class AutoCleanView(AbstractView):
         self.progress_bar_label.setText(step)
 
     def update_stats(self, stats: dict):
-        # TODO: Implement update_stats
-        pass
+        self.cleaning_operations_label.setText(f"Total Modifications: {stats['operations']}")
+        self.data_types_label.setText(f"Data Types Converted: {stats['data_types']}")
+        self.duplicates_label.setText(f"Duplicates Removed: {stats['duplicates']}")
+        self.outliers_label.setText(f"Outliers Removed: {stats['outliers']}")
+        self.values_dropped.setText(f"Missing Values Dropped: {stats['missing_dropped']}")
+        self.values_imputed.setText(f"Missing Values Imputed: {stats['missing_imputed']}")
+
+    def reset_stats(self):
+        self.cleaning_operations_label.setText("Total Modifications: 0")
+        self.data_types_label.setText("Data Types Converted: 0")
+        self.duplicates_label.setText("Duplicates Removed: 0")
+        self.outliers_label.setText("Outliers Removed: 0")
+        self.values_dropped.setText("Missing Values Dropped: 0")
+        self.values_imputed.setText("Missing Values Imputed: 0")
 
     def show_error_dialog(self, error: str):
         error_dialog = QMessageBox()

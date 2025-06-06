@@ -30,6 +30,7 @@ class AutoCleanViewModel(ViewModel):
         self._cleaning_running = False
         self.worker = None
         self.worker_thread = None
+        self.stats = {}
 
         # Connect to model updates
         self.database_service.model.data_changed.connect(lambda database: self.tables_loaded.emit(database))
@@ -86,15 +87,42 @@ class AutoCleanViewModel(ViewModel):
             Configuration.ANALYZE_UNITS: False
         }
 
+    def init_cleaning_stats(self):
+        self.stats = {
+            "operations": 0,
+            "data_types": 0,
+            "duplicates": 0,
+            "outliers": 0,
+            "missing_dropped": 0,
+            "missing_imputed": 0
+        }
+        self.cleaning_stats_updated.emit(self.stats)
+
+    def update_stats(self, key: str, value: int):
+        if key in self.stats.keys():
+            self.stats[key] += value
+            self.cleaning_stats_updated.emit(self.stats)
+
     def start_worker(self, on_finished, error_signal, progress_signal, step_signal):
         self.worker_thread = QThread()
         self.worker.moveToThread(self.worker_thread)
+
+        # Reset stats
+        self.init_cleaning_stats()
 
         # Connect signals and slots
         self.worker.finished.connect(on_finished)
         self.worker.error.connect(error_signal.emit)
         self.worker.progress.connect(progress_signal.emit)
         self.worker.step.connect(step_signal.emit)
+
+        # Connect cleaning stats signals
+        self.worker.cleaning_operations.connect(lambda x: self.update_stats("operations", x))
+        self.worker.data_types_converted.connect(lambda x: self.update_stats("data_types", x))
+        self.worker.duplicates_removed.connect(lambda x: self.update_stats("duplicates", x))
+        self.worker.outliers_removed.connect(lambda x: self.update_stats("outliers", x))
+        self.worker.missing_values_dropped.connect(lambda x: self.update_stats("missing_dropped", x))
+        self.worker.missing_values_imputed.connect(lambda x: self.update_stats("missing_imputed", x))
 
         # Thread cleanup
         self.worker.finished.connect(self.worker_thread.quit)
