@@ -27,9 +27,17 @@ class DataViewerViewModel(ViewModel):
         self._is_editing = False
         self._query_result = None
 
+        # Connect to model updates
+        self.data_editor_service.model.observe(self.on_database_update)
+
     def set_nav_destination(self, destination: Screen):
         self._nav_destination = destination
         self.nav_destination_changed.emit(destination)
+
+    def on_database_update(self, database: dict[str, DataFrame]):
+        if self._table_name:
+            self._data = database[self._table_name]
+            self.data_changed.emit({"table_name": self._table_name, "data": self._data.copy(deep=True)})
 
     def set_table(self, table_name: str):
         # Set and retrieve table in the service
@@ -43,7 +51,6 @@ class DataViewerViewModel(ViewModel):
         self.is_editing_changed.emit(self._is_editing)
 
     def emit_update_signals(self):
-        self.data_changed.emit({"table_name": self._table_name, "data": self._data.copy(deep=True)})
         self.undo_available_changed.emit(self.data_editor_service.get_undo_available())
         self.redo_available_changed.emit(self.data_editor_service.get_redo_available())
 

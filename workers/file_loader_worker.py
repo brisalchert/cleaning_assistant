@@ -1,6 +1,6 @@
 from PyQt6.QtCore import QObject, pyqtSignal
 
-from services import DatabaseServiceWrapper
+from services import DatabaseService
 
 
 class FileLoaderWorker(QObject):
@@ -8,9 +8,9 @@ class FileLoaderWorker(QObject):
     error: pyqtSignal = pyqtSignal(str)
     progress: pyqtSignal = pyqtSignal(str)
 
-    def __init__(self, database_service_wrapper: DatabaseServiceWrapper, file_list: list[str], csv_config: dict):
+    def __init__(self, database_service: DatabaseService, file_list: list[str], csv_config: dict):
         super().__init__()
-        self.database_service_wrapper = database_service_wrapper
+        self.database_service = database_service
         self.file_list = file_list
         self.csv_config = csv_config
 
@@ -18,7 +18,7 @@ class FileLoaderWorker(QObject):
         """Load the database from the file list using a separate thread."""
         try:
             self.progress.emit("Loading database into memory...")
-            success = self.database_service_wrapper.load_from_files(self.file_list, self.csv_config)
+            success = self.database_service.load_from_files(self.file_list, self.csv_config)
             self.progress.emit("Database loaded successfully.")
             self.finished.emit(success)
         except Exception as e:

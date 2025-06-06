@@ -123,10 +123,6 @@ class DatabaseService(AbstractService, DatabaseAccess, ModelEditor):
 
         return True
 
-    def get_tables(self) -> dict[str, DataFrame]:
-        # TODO: Check access (do not allow view to edit model directly, may need to pass a copy)
-        return self._model.database
-
     def reset_data(self):
         # TODO: Implement reset_data
         pass

@@ -27,7 +27,7 @@ class QueryService(AbstractService):
         self._query = query
 
     def execute_query(self) -> DataFrame:
-        return sqldf(self._query, env=self._model.database)
+        return sqldf(self._query, env=self._model.get_database())
 
     def get_last_result(self) -> DataFrame:
         return self._last_query_result

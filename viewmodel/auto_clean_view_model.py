@@ -1,7 +1,7 @@
 import io
 from PyQt6.QtCore import pyqtSignal
 from navigation import Screen
-from services import DataCleaningService, AnalyticsService, DatabaseServiceWrapper
+from services import DataCleaningService, AnalyticsService, DatabaseService
 from utils import Configuration
 from viewmodel import ViewModel
 
@@ -17,9 +17,9 @@ class AutoCleanViewModel(ViewModel):
     current_step_changed: pyqtSignal = pyqtSignal(str)
     cleaning_stats_updated: pyqtSignal = pyqtSignal(dict)
 
-    def __init__(self, database_service_wrapper: DatabaseServiceWrapper, data_cleaning_service: DataCleaningService, analytics_service: AnalyticsService):
+    def __init__(self, database_service: DatabaseService, data_cleaning_service: DataCleaningService, analytics_service: AnalyticsService):
         super().__init__()
-        self.database_service_wrapper = database_service_wrapper
+        self.database_service = database_service
         self.data_cleaning_service = data_cleaning_service
         self.analytics_service = analytics_service
         self._nav_destination = Screen.AUTO_CLEAN
@@ -30,8 +30,8 @@ class AutoCleanViewModel(ViewModel):
         self._progress = None
         self._current_step = None
 
-        # Connect service signal to view model signal
-        self.database_service_wrapper.tables_loaded.connect(self.tables_loaded.emit)
+        # Connect to model updates
+        self.database_service.model.observe(self.tables_loaded.emit)
 
         # Initialize configurations
         self.init_cleaning_config()

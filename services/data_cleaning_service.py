@@ -60,12 +60,15 @@ class DataCleaningService(AbstractService, ModelEditor):
 
     def impute_missing_mean(self, column: str):
         self._table = self._table[column].fillna(self._table[column].mean())
+        self._model.set_table(self._table_name, self._table)
 
     def impute_missing_median(self, column: str):
         self._table = self._table[column].fillna(self._table[column].median())
+        self._model.set_table(self._table_name, self._table)
 
     def drop_missing(self, column: str):
         self._table = self._table[column].dropna()
+        self._model.set_table(self._table_name, self._table)
 
     def get_categories(self, column: str):
         if self._table[column].dtype == "category":
@@ -76,22 +79,27 @@ class DataCleaningService(AbstractService, ModelEditor):
     def clean_categories(self, column: str, correction_map: dict):
         self._table[column] = self._table[column].replace(correction_map)
         self._table[column] = self._table[column].astype("category")
+        self._model.set_table(self._table_name, self._table)
 
     def autocorrect_categories(self, column: str, correct_categories: list):
         self._table[column] = self._table[column].apply(lambda row: correct_spelling(row, correct_categories))
         self._table[column] = self._table[column].astype("category")
+        self._model.set_table(self._table_name, self._table)
 
     def trim_strings(self, column: str):
         self._table[column] = self._table[column].str.strip()
+        self._model.set_table(self._table_name, self._table)
 
     def rename_column(self, column: str, new_name: str):
         self._table[column] = self._table[column].rename(new_name)
+        self._model.set_table(self._table_name, self._table)
 
     def get_data_type(self, column: str):
         return self._table[column].dtype
 
     def drop_duplicates(self, column: str):
         self._table[column] = self._table[column].drop_duplicates()
+        self._model.set_table(self._table_name, self._table)
 
     def get_outliers(self, column: str) -> DataFrame:
         q_low = self._table[column].quantile(0.01)
@@ -105,6 +113,7 @@ class DataCleaningService(AbstractService, ModelEditor):
             minimum, maximum = self._table[column].quantile(0.01), self._table[column].quantile(0.99)
 
         self._table = self._table[(self._table[column] > minimum) & (self._table[column] < maximum)]
+        self._model.set_table(self._table_name, self._table)
 
     def set_cleaning_script(self, script: io.TextIOWrapper):
         # TODO: Implement set_cleaning_script

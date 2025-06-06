@@ -1,7 +1,7 @@
 from PyQt6.QtCore import pyqtSignal, QThread
 
 from navigation import Screen
-from services import DataEditorService, DatabaseExportWorker, DatabaseServiceWrapper
+from services import DataEditorService, DatabaseExportWorker, DatabaseService
 from utils.security import save_encrypted_db_credentials, load_key, delete_saved_db_credentials
 from viewmodel import ViewModel
 from workers import DatabaseLoaderWorker, FileLoaderWorker
@@ -18,13 +18,11 @@ class MainViewModel(ViewModel):
     exporting_completion: pyqtSignal = pyqtSignal(str)
     exporting_error: pyqtSignal = pyqtSignal(str)
 
-    def __init__(self, database_service_wrapper: DatabaseServiceWrapper, data_editor_service: DataEditorService):
+    def __init__(self, database_service: DatabaseService, data_editor_service: DataEditorService):
         super().__init__()
-        self.database_service_wrapper = database_service_wrapper
-        self.database_service = database_service_wrapper.database_service
+        self.database_service = database_service
         self.data_editor_service = data_editor_service
         self._nav_destination = Screen.MAIN
-        self._data = None
         self._database_loaded = None
         self.save_connection_parameters = False
         self.connection_details = None
@@ -32,6 +30,9 @@ class MainViewModel(ViewModel):
         # Thread attributes
         self.worker_thread = None
         self.worker = None
+
+        # Connect to model updates
+        self.database_service.model.observe(self.data_changed.emit)
 
     def set_nav_destination(self, destination: Screen):
         self._nav_destination = destination
@@ -47,12 +48,12 @@ class MainViewModel(ViewModel):
             "port": port
         }
 
-        self.worker = DatabaseLoaderWorker(self.database_service_wrapper, self.connection_details)
+        self.worker = DatabaseLoaderWorker(self.database_service, self.connection_details)
         self._database_loaded = False
         self.start_worker(self.on_database_loading_finished, self.database_loading_error, self.database_loading_progress)
 
     def load_files(self, file_list: list[str], csv_config: dict):
-        self.worker = FileLoaderWorker(self.database_service_wrapper, file_list, csv_config)
+        self.worker = FileLoaderWorker(self.database_service, file_list, csv_config)
         self._database_loaded = False
         self.start_worker(self.on_file_loading_finished, self.database_loading_error, self.database_loading_progress)
 
@@ -68,9 +69,7 @@ class MainViewModel(ViewModel):
             else:
                 delete_saved_db_credentials()
 
-            self._data = self.database_service.get_tables()
             self._database_loaded = True
-            self.data_changed.emit(self._data)
             self.database_loaded_changed.emit(self._database_loaded)
         else:
             self._database_loaded = False
@@ -82,9 +81,7 @@ class MainViewModel(ViewModel):
 
     def on_file_loading_finished(self, success: bool):
         if success:
-            self._data = self.database_service.get_tables()
             self._database_loaded = True
-            self.data_changed.emit(self._data)
             self.database_loaded_changed.emit(self._database_loaded)
         else:
             self._database_loaded = False

@@ -57,7 +57,7 @@ class DataEditorService(AbstractService, ModelEditor):
 
     def update_row(self, table_name: str, row: int, new_row_df: DataFrame) -> bool:
         # TODO: Check data types when making edits
-        old_row_df = self._model.database[table_name].iloc[[row]].copy(deep=True)
+        old_row_df = self._model.get_table(table_name).iloc[[row]].copy(deep=True)
         result = self._model.update_row(table_name, row, new_row_df)
 
         # Update undo stack
@@ -72,7 +72,7 @@ class DataEditorService(AbstractService, ModelEditor):
     # --- Subclass methods ---
 
     def set_table(self, table_name: str):
-        self.current_table = self._model.read_table(table_name)
+        self.current_table = self._model.get_table(table_name)
 
     def get_current_table(self) -> DataFrame:
         return self.current_table
@@ -83,9 +83,20 @@ class DataEditorService(AbstractService, ModelEditor):
             diffs = self.undo_stack.pop()
             self.redo_stack.append(diffs)
 
+            updated_tables = {}
+
             # Apply undo
             for diff in diffs:
-                self._model.database[diff["table"]].at[diff["row"], diff["column"]] = diff["old_value"]
+                table_name = diff["table"]
+
+                if table_name not in updated_tables:
+                    updated_tables[table_name] = self._model.get_table(table_name).copy(deep=True)
+
+                updated_tables[table_name].at[diff["row"], diff["column"]] = diff["old_value"]
+
+            # Trigger updates in the model
+            for table_name, updated_df in updated_tables.items():
+                self._model.set_table(table_name, updated_df)
 
     def redo_change(self):
         if len(self.redo_stack) > 0:
@@ -93,16 +104,27 @@ class DataEditorService(AbstractService, ModelEditor):
             diffs = self.redo_stack.pop()
             self.undo_stack.append(diffs)
 
+            updated_tables = {}
+
             # Apply redo
             for diff in diffs:
-                self._model.database[diff["table"]].at[diff["row"], diff["column"]] = diff["new_value"]
+                table_name = diff["table"]
+
+                if table_name not in updated_tables:
+                    updated_tables[table_name] = self._model.get_table(table_name).copy(deep=True)
+
+                updated_tables[table_name].at[diff["row"], diff["column"]] = diff["new_value"]
+
+            # Trigger updates in the model
+            for table_name, updated_df in updated_tables.items():
+                self._model.set_table(table_name, updated_df)
 
     def export_data(self, directory: str) -> bool:
         # Create directory for export files
         path = Path(f"{directory}/cleaning_assistant_export")
         path.mkdir(parents=True, exist_ok=True)
 
-        for name, df in self._model.database.items():
+        for name, df in self._model.get_database().items():
             file_name = f"{name}.csv"
             file_path = Path(f"{path}/{file_name}")
 

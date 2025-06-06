@@ -6,5 +6,4 @@ from .data_cleaning_service import DataCleaningService
 from .data_editor_service import DataEditorService
 from .database_export_worker import DatabaseExportWorker
 from .database_service import DatabaseService
-from .database_service_wrapper import DatabaseServiceWrapper
 from .query_service import QueryService
