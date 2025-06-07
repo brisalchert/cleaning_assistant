@@ -1,3 +1,5 @@
+import time
+
 import pandas as pd
 from pandas import Series, DataFrame
 import missingno as msno
@@ -161,19 +163,33 @@ class AnalyticsService(AbstractService, ModelEditor):
         self._plots["outliers"] = canvas
 
     def create_distribution_plot(self, column: str):
+        start = time.time()
+        # Drop missing values for plotting
+        series = self._table[column].dropna()
+
+        # Skip empty or non-numeric columns
+        if series.empty or not (pd.api.types.is_numeric_dtype(series) or pd.api.types.is_datetime64_any_dtype(series)):
+            return
+
+        # Do not include KDE for large datasets to avoid KDE hanging
+        if len(series) > 10000:
+            kde = False
+        else:
+            kde = False
+
         canvas = MplCanvas()
         ax = canvas.fig.add_subplot(111)
-        sns.histplot(self._table[column], kde=True, bins = 30, ax=ax)
+        sns.histplot(self._table[column], kde=kde, bins = 30, ax=ax)
         ax.set_title(f"Distribution Plot for {column.title()}")
         ax.set_xlabel("Value")
         ax.set_ylabel("Frequency")
         canvas.draw()
 
         # Add canvas to plots
-        if self._plots["distributions"] is None:
-            self._plots["distributions"] = {}
-
+        self._plots.setdefault("distributions", {})
         self._plots["distributions"][column] = canvas
+
+        print(f"[Analytics] Plotted {column} in {time.time() - start:.2f}s")
 
     def generate_suggestions(self):
         self._suggestions["missingness"] = """If a column contains only 5% or fewer missing values,

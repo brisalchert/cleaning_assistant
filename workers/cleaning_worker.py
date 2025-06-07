@@ -122,12 +122,12 @@ class CleaningWorker(QObject):
 
             self.step.emit("Gathering analytics...")
 
-            # # Column-specific analytics
-            # for column, options in self.analytics_config[Configuration.COLUMNS].items():
-            #     for key, value in options.items():
-            #         if key == Configuration.ANALYZE_DISTRIBUTION:
-            #             self.step.emit("Generating column distribution plots...")
-            #             self.analytics_service.create_distribution_plot(column)
+            # Column-specific analytics
+            for column, options in self.analytics_config[Configuration.COLUMNS].items():
+                for key, value in options.items():
+                    if key == Configuration.ANALYZE_DISTRIBUTION:
+                        self.step.emit("Generating column distribution plots...")
+                        self.analytics_service.create_distribution_plot(column)
 
             self.progress.emit(85)
 
