@@ -2,7 +2,7 @@ import pandas as pd
 from PyQt6.QtCore import QObject, pyqtSignal
 
 from services import DataCleaningService, AnalyticsService
-from utils import Configuration, MplCanvas
+from utils import Configuration
 
 
 class CleaningWorker(QObject):
@@ -17,7 +17,13 @@ class CleaningWorker(QObject):
     missing_values_dropped: pyqtSignal = pyqtSignal(int)
     missing_values_imputed: pyqtSignal = pyqtSignal(int)
 
-    def __init__(self, data_cleaning_service: DataCleaningService, analytics_service: AnalyticsService, cleaning_config: dict, analytics_config: dict):
+    def __init__(
+            self,
+            data_cleaning_service: DataCleaningService,
+            analytics_service: AnalyticsService,
+            cleaning_config: dict,
+            analytics_config: dict
+    ):
         super().__init__()
         self.data_cleaning_service = data_cleaning_service
         self.analytics_service = analytics_service
@@ -25,9 +31,9 @@ class CleaningWorker(QObject):
         self.analytics_config = analytics_config
 
     def run(self):
-        """Apply the cleaning and analytics scripts using a separate thread."""
+        """Apply the cleaning and analytics operations using a separate thread."""
         try:
-            self.step.emit("Starting cleaning script...")
+            self.step.emit("Starting cleaning operations...")
 
             # Column-specific cleaning
             for column, options in self.cleaning_config[Configuration.COLUMNS].items():
@@ -127,23 +133,29 @@ class CleaningWorker(QObject):
                 for key, value in options.items():
                     if key == Configuration.ANALYZE_DISTRIBUTION:
                         self.step.emit("Generating column distribution plots...")
-                        self.analytics_service.create_distribution_plot(column)
+                        self.analytics_service.create_distribution_plot_data(column)
 
             self.progress.emit(85)
 
             # General analytics
-            self.step.emit("Analyzing missingness...")
-            self.analytics_service.create_missingness_plot()
-            self.analytics_service.calculate_missingness_stats()
+            if self.analytics_config[Configuration.ANALYZE_MISSINGNESS]:
+                self.step.emit("Analyzing missingness...")
+                self.analytics_service.create_missingness_plot_data()
+                self.analytics_service.calculate_missingness_stats()
+
             self.progress.emit(90)
 
-            self.step.emit("Analyzing categories...")
-            self.analytics_service.calculate_category_stats()
+            if self.analytics_config[Configuration.ANALYZE_CATEGORIES]:
+                self.step.emit("Analyzing categories...")
+                self.analytics_service.calculate_category_stats()
+
             self.progress.emit(95)
 
-            self.step.emit("Analyzing outliers...")
-            self.analytics_service.create_outlier_plot()
-            self.analytics_service.calculate_outlier_stats()
+            if self.analytics_config[Configuration.ANALYZE_OUTLIERS]:
+                self.step.emit("Analyzing outliers...")
+                self.analytics_service.create_outlier_plot_data()
+                self.analytics_service.calculate_outlier_stats()
+
             self.progress.emit(99)
 
             self.step.emit("Generating suggestions...")

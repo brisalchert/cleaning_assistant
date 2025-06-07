@@ -1,12 +1,8 @@
-import time
-
 import pandas as pd
 from pandas import DataFrame
-import missingno as msno
-import seaborn as sns
+
 from model import DataModel
 from services import AbstractService
-from utils import MplCanvas
 
 
 class AnalyticsService(AbstractService):
@@ -24,11 +20,15 @@ class AnalyticsService(AbstractService):
 
     @property
     def plots(self) -> dict:
-        return self._plots
+        return self._plot_data
 
     @property
     def suggestions(self) -> dict:
         return self._suggestions
+
+    @property
+    def analytics_available(self) -> bool:
+        return self._analytics_available
 
     def __init__(self, model: DataModel):
         self._model = model
@@ -36,8 +36,9 @@ class AnalyticsService(AbstractService):
         self._table_name = None
         self._table: DataFrame = pd.DataFrame()
         self._statistics = {}
-        self._plots = {}
+        self._plot_data = {}
         self._suggestions = {}
+        self._analytics_available = False
 
     def set_table(self, table_name: str):
         self._table_name = table_name
@@ -45,11 +46,15 @@ class AnalyticsService(AbstractService):
 
     def reset_analytics(self):
         self._statistics = {}
-        self._plots = {}
+        self._plot_data = {}
         self._suggestions = {}
+        self._analytics_available = False
 
     def set_analytics_config(self, analytics_config):
         self._analytics_config = analytics_config
+
+    def set_analytics_available(self, analytics_available):
+        self._analytics_available = analytics_available
 
     def get_outlier_columns(self) -> DataFrame:
         """Returns a DataFrame with only the columns of the current table that
@@ -110,17 +115,10 @@ class AnalyticsService(AbstractService):
                 "upper": upper_outlier_count,
             }
 
-    def create_missingness_plot(self):
-        canvas = MplCanvas()
-        ax = canvas.fig.add_subplot(111)
-        msno.matrix(self._table, ax=ax, sparkline=False)
-        ax.set_title("Missingness Distribution per Column")
-        canvas.draw()
+    def create_missingness_plot_data(self):
+        self._plot_data["missingness"] = self._table
 
-        # Add canvas to plots
-        self._plots["missingness"] = canvas
-
-    def create_outlier_plot(self):
+    def create_outlier_plot_data(self):
         df_combined = self.get_outlier_columns()
 
         # Normalize column values
@@ -132,21 +130,9 @@ class AnalyticsService(AbstractService):
             return (series - min_val) / (max_val - min_val)
 
         df_normalized = df_combined.apply(min_max_norm)
+        self._plot_data["outliers"] = df_normalized
 
-        df_melted = df_normalized.melt(var_name="column", value_name="value").dropna()
-
-        canvas = MplCanvas()
-        ax = canvas.fig.add_subplot(111)
-        sns.boxplot(x="column", y="value", data=df_melted, showfliers=True, ax=ax)
-        ax.set_title("Boxplot for Outliers (Numeric, Dates, and String Lengths [Normalized])")
-        ax.tick_params(axis='x', labelrotation=45)
-        canvas.draw()
-
-        # Add canvas to plots
-        self._plots["outliers"] = canvas
-
-    def create_distribution_plot(self, column: str):
-        start = time.time()
+    def create_distribution_plot_data(self, column: str):
         # Drop missing values for plotting
         series = self._table[column].dropna()
 
@@ -154,49 +140,39 @@ class AnalyticsService(AbstractService):
         if series.empty or not (pd.api.types.is_numeric_dtype(series) or pd.api.types.is_datetime64_any_dtype(series)):
             return
 
-        # Do not include KDE for large datasets to avoid KDE hanging
-        if len(series) > 10000:
-            kde = False
-        else:
-            kde = False
-
-        canvas = MplCanvas()
-        ax = canvas.fig.add_subplot(111)
-        sns.histplot(self._table[column], kde=kde, bins = 30, ax=ax)
-        ax.set_title(f"Distribution Plot for {column.title()}")
-        ax.set_xlabel("Value")
-        ax.set_ylabel("Frequency")
-        canvas.draw()
-
-        # Add canvas to plots
-        self._plots.setdefault("distributions", {})
-        self._plots["distributions"][column] = canvas
-
-        print(f"[Analytics] Plotted {column} in {time.time() - start:.2f}s")
+        self._plot_data.setdefault("distributions", {})
+        self._plot_data["distributions"][column] = series
 
     def generate_suggestions(self):
-        self._suggestions["missingness"] = """If a column contains only 5% or fewer missing values,
-        the records with missing values can be dropped. If there are more than 5% missing values,
-        consider imputing values with measures of center. Imputing with the mean is appropriate for
-        columns with a roughly normal distribution, whereas imputing with the median is appropriate for
-        columns with a skewed distribution. For non-numeric columns, consider imputing with the mode."""
+        self._suggestions["missingness"] = (
+            "If a column contains only 5% or fewer missing values, "
+            "the records with missing values can be dropped. If there are more than 5% missing values, "
+            "consider imputing values with measures of center. Imputing with the mean is appropriate for "
+            "columns with a roughly normal distribution, whereas imputing with the median is appropriate for "
+            "columns with a skewed distribution. For non-numeric columns, consider imputing with the mode."
+        )
 
-        self._suggestions["outliers"] = """Outliers can impact the distribution of a column by 
-        'pulling' the mean in one direction or the other. They can also make it more difficult
-        for machine learning models to learn patterns in the dataset. For numeric columns, consider
-        dropping records containing outliers. For datetime columns or string columns, use the query
-        tool in the table view screen to examine outlying dates or long/short strings more closely
-        for issues."""
+        self._suggestions["outliers"] = (
+            "Outliers can impact the distribution of a column by "
+            "\"pulling\" the mean in one direction or the other. They can also make it more difficult "
+            "for machine learning models to learn patterns in the dataset. For numeric columns, consider "
+            "dropping records containing outliers. For datetime columns or string columns, use the query "
+            "tool in the table view screen to examine outlying dates or long/short strings more closely "
+            "for issues."
+        )
 
-        self._suggestions["categories"] = """This tool can catch minor spelling errors in category
-        names, but larger errors or extraneous categories may go unprocessed. Examine the category
-        list below for each categorical column. If necessary, provide a correction map for cleaning
-        the remaining categories. Format the map as follows: \"[incorrect_category]: [corrected_category]\".
-        Use commas to separate entries."""
 
-        self._suggestions["distributions"] = """Machine learning models can struggle with numeric data
-        that follows a skewed distribution. Consider standardizing columns that do not follow a normal
-        distribution or have many outliers."""
+        self._suggestions["categories"] = (
+            "This tool can catch minor spelling errors in category names, but larger errors or extraneous "
+            "categories may go unprocessed. Examine the category list below for each categorical column. "
+            "If necessary, provide a correction map for cleaning the remaining categories. Format the map as "
+            "follows: \"[incorrect_category]: [corrected_category]\". Use commas to separate entries."
+        )
+
+        self._suggestions["distributions"] = (
+            "Machine learning models can struggle with numeric data that follows a skewed distribution. "
+            "Consider standardizing columns that do not follow a normal distribution or have many outliers."
+        )
 
     def save_stats(self):
         # TODO: Implement save_stats

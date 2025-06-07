@@ -92,7 +92,8 @@ class AutoCleanViewModel(ViewModel):
         self._analytics_config = {
             Configuration.COLUMNS: {},
             Configuration.ANALYZE_MISSINGNESS: False,
-            Configuration.ANALYZE_CATEGORIES: False
+            Configuration.ANALYZE_CATEGORIES: False,
+            Configuration.ANALYZE_OUTLIERS: False
         }
 
     def init_cleaning_stats(self):
@@ -114,10 +115,6 @@ class AutoCleanViewModel(ViewModel):
     def start_worker(self, on_finished, error_signal=None, progress_signal=None, step_signal=None):
         self.worker_thread = QThread()
         self.worker.moveToThread(self.worker_thread)
-
-        # Reset stats
-        self.init_cleaning_stats()
-        self.analytics_service.reset_analytics()
 
         # Connect signals and slots
         self.worker.finished.connect(on_finished)
@@ -148,11 +145,27 @@ class AutoCleanViewModel(ViewModel):
         # Start worker thread
         self.worker_thread.start()
 
+    def emit_analytics_signals(self):
+        self._notifier.statistics_updated.emit(self.analytics_service.statistics)
+        self._notifier.plots_updated.emit(self.analytics_service.plots)
+        self._notifier.suggestions_updated.emit(self.analytics_service.suggestions)
+        self._notifier.analytics_updated.emit(self.analytics_service.analytics_available)
+
     def run_current_config(self):
         self._cleaning_running = True
         self.cleaning_running_changed.emit(self._cleaning_running)
 
-        self.worker = CleaningWorker(self.data_cleaning_service, self.analytics_service, self._cleaning_config, self._analytics_config)
+        # Reset stats
+        self.init_cleaning_stats()
+        self.analytics_service.reset_analytics()
+        self.emit_analytics_signals()
+
+        self.worker = CleaningWorker(
+            self.data_cleaning_service,
+            self.analytics_service,
+            self._cleaning_config,
+            self._analytics_config
+        )
         self.start_worker(self.on_run_finished, self.cleaning_error, self.progress_updated, self.current_step_changed)
 
     def on_run_finished(self, success: bool):
@@ -161,9 +174,9 @@ class AutoCleanViewModel(ViewModel):
         self.cleaning_finished.emit(success)
 
         if success:
-            self._notifier.statistics_updated.emit(self.analytics_service.statistics)
-            self._notifier.plots_updated.emit(self.analytics_service.plots)
-            self._notifier.suggestions_updated.emit(self.analytics_service.suggestions)
+            # Update analytics view
+            self.analytics_service.set_analytics_available(True)
+            self.emit_analytics_signals()
 
     def run_script_from_file(self, script_path: str):
         self.worker = ScriptWorker(self.data_cleaning_service, script_path)

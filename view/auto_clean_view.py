@@ -4,7 +4,7 @@ from PyQt6.QtCore import Qt, QDate
 from PyQt6.QtGui import QFont, QIntValidator, QDoubleValidator
 from PyQt6.QtWidgets import QLabel, QWidget, QVBoxLayout, QScrollArea, QSizePolicy, QComboBox, QHBoxLayout, \
     QButtonGroup, QRadioButton, QCheckBox, QPushButton, QProgressBar, QSplitter, QFrame, QStackedWidget, QLineEdit, \
-    QDateEdit, QTextEdit, QMessageBox, QFileDialog
+    QDateEdit, QMessageBox, QFileDialog
 from pandas import DataFrame
 
 from navigation import NavigationController
@@ -253,7 +253,7 @@ class AutoCleanView(AbstractView):
         # Missing values
         self.missingness_analysis_label = QLabel("Missing Values:")
         self.missingness_analysis_label.setFont(QFont(self.font, 12))
-        self.missingness_plot_checkbox = QCheckBox("Analyze missingness pattern")
+        self.missingness_plot_checkbox = QCheckBox("Analyze missingness")
         self.missingness_plot_checkbox.setFont(QFont(self.font, 10))
         self.analytics_config_container.layout().addWidget(self.missingness_analysis_label)
         self.analytics_config_container.layout().addWidget(self.missingness_plot_checkbox)
@@ -453,14 +453,13 @@ class AutoCleanView(AbstractView):
 
         # Stacked widget for data type cleaning options
         data_type_config_stack = QStackedWidget()
-        data_type_config_stack.setLayout(QHBoxLayout())
-        data_type_config_stack.layout().addWidget(int_range_container)
-        data_type_config_stack.layout().addWidget(float_range_container)
-        data_type_config_stack.layout().addWidget(QWidget()) # Empty for "bool" type
-        data_type_config_stack.layout().addWidget(string_length_container)
-        data_type_config_stack.layout().addWidget(date_range_container)
-        data_type_config_stack.layout().addWidget(category_widget_container)
-        data_type_config_stack.layout().addWidget(QWidget()) # Empty for "object" type
+        data_type_config_stack.addWidget(int_range_container)
+        data_type_config_stack.addWidget(float_range_container)
+        data_type_config_stack.addWidget(QWidget()) # Empty for "bool" type
+        data_type_config_stack.addWidget(string_length_container)
+        data_type_config_stack.addWidget(date_range_container)
+        data_type_config_stack.addWidget(category_widget_container)
+        data_type_config_stack.addWidget(QWidget()) # Empty for "object" type
 
         # Connect selector to changes in stacked widget display
         data_type_select.currentIndexChanged.connect(data_type_config_stack.setCurrentIndex)

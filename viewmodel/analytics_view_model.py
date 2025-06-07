@@ -2,15 +2,16 @@ from PyQt6.QtCore import pyqtSignal
 
 from navigation import Screen
 from services import DataCleaningService, AnalyticsService
-from utils import AnalyticsNotifier
+from utils import AnalyticsNotifier, Operation
 from viewmodel import ViewModel
 
 
 class AnalyticsViewModel(ViewModel):
     nav_destination_changed: pyqtSignal = pyqtSignal(Screen)
     stats_updated: pyqtSignal = pyqtSignal(dict)
-    plots_updated: pyqtSignal = pyqtSignal(dict)
+    plot_data_updated: pyqtSignal = pyqtSignal(dict)
     suggestions_updated: pyqtSignal = pyqtSignal(dict)
+    analytics_updated: pyqtSignal = pyqtSignal(bool)
 
     def __init__(
             self,
@@ -24,13 +25,14 @@ class AnalyticsViewModel(ViewModel):
         self._notifier = analytics_notifier
         self._nav_destination = Screen.ANALYTICS
         self._statistics = None
-        self._plots = None
+        self._plot_data = None
         self._suggestions = None
 
         # Connect to analytics notifier
         self._notifier.statistics_updated.connect(self.on_statistics_updated)
-        self._notifier.plots_updated.connect(self.on_plots_updated)
+        self._notifier.plots_updated.connect(self.on_plot_data_updated)
         self._notifier.suggestions_updated.connect(self.on_suggestions_updated)
+        self._notifier.analytics_updated.connect(self.on_analytics_updated)
 
     def set_nav_destination(self, destination: Screen):
         self._nav_destination = destination
@@ -40,20 +42,19 @@ class AnalyticsViewModel(ViewModel):
         self._statistics = statistics
         self.stats_updated.emit(statistics)
 
-    def on_plots_updated(self, plots: dict):
-        self._plots = plots
-        self.plots_updated.emit(plots)
+    def on_plot_data_updated(self, plot_data: dict):
+        self._plot_data = plot_data
+        self.plot_data_updated.emit(plot_data)
 
     def on_suggestions_updated(self, suggestions: dict):
         self._suggestions = suggestions
         self.suggestions_updated.emit(suggestions)
 
-    def apply_suggestion(self, suggestion: dict):
-        # TODO: Implement apply_suggestion
-        pass
+    def on_analytics_updated(self, available: bool):
+        self.analytics_updated.emit(available)
 
-    def discard_suggestion(self, suggestion: dict):
-        # TODO: Implement discard_suggestion
+    def apply_suggestion(self, operation: Operation, column: str):
+        # TODO: Implement apply_suggestion
         pass
 
     def save_stats(self):
