@@ -5,7 +5,6 @@ from pandas import Series, DataFrame
 
 from model import DataModel
 from services import AbstractService
-from services import ModelEditor
 
 
 def get_dataframe_diff(table_name: str, old_row_df: DataFrame, new_row_df: DataFrame) -> list[dict]:
@@ -36,7 +35,7 @@ def get_dataframe_diff(table_name: str, old_row_df: DataFrame, new_row_df: DataF
     return diffs
 
 
-class DataEditorService(AbstractService, ModelEditor):
+class DataEditorService(AbstractService):
     @property
     def model(self) -> DataModel:
         return self._model
@@ -46,14 +45,6 @@ class DataEditorService(AbstractService, ModelEditor):
         self.current_table: DataFrame = pd.DataFrame()
         self.undo_stack: list[list[dict]] = []
         self.redo_stack: list[list[dict]] = []
-
-    # --- ModelEditor overrides ---
-
-    def create_row(self, table_name: str, columns: dict) -> bool:
-        return self._model.create_row(table_name, columns)
-
-    def read_row(self, table_name: str, primary_key: str) -> Series:
-        return self._model.read_row(table_name, primary_key)
 
     def update_row(self, table_name: str, row: int, new_row_df: DataFrame) -> bool:
         # TODO: Check data types when making edits
@@ -65,11 +56,6 @@ class DataEditorService(AbstractService, ModelEditor):
             self.undo_stack.append(get_dataframe_diff(table_name, old_row_df, new_row_df))
 
         return result
-
-    def delete_row(self, table_name: str, primary_key: str) -> Series:
-        return self._model.delete_row(table_name, primary_key)
-
-    # --- Subclass methods ---
 
     def set_table(self, table_name: str):
         self.current_table = self._model.get_table(table_name)

@@ -1,16 +1,15 @@
 import time
 
 import pandas as pd
-from pandas import Series, DataFrame
+from pandas import DataFrame
 import missingno as msno
-import matplotlib.pyplot as plt
 import seaborn as sns
 from model import DataModel
-from services import AbstractService, ModelEditor
+from services import AbstractService
 from utils import MplCanvas
 
 
-class AnalyticsService(AbstractService, ModelEditor):
+class AnalyticsService(AbstractService):
     @property
     def model(self) -> DataModel:
         return self._model
@@ -39,22 +38,6 @@ class AnalyticsService(AbstractService, ModelEditor):
         self._statistics = {}
         self._plots = {}
         self._suggestions = {}
-
-    # --- ModelEditor overrides ---
-
-    def create_row(self, table_name: str, columns: dict) -> bool:
-        return self._model.create_row(table_name, columns)
-
-    def read_row(self, table_name: str, primary_key: str) -> Series:
-        return self._model.read_row(table_name, primary_key)
-
-    def update_row(self, table_name: str, primary_key: str, columns: dict) -> bool:
-        return self._model.update_row(table_name, primary_key, columns)
-
-    def delete_row(self, table_name: str, primary_key: str) -> Series:
-        return self._model.delete_row(table_name, primary_key)
-
-    # --- Subclass methods ---
 
     def set_table(self, table_name: str):
         self._table_name = table_name

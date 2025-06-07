@@ -1,5 +1,4 @@
 from .abstract_service import AbstractService
-from .model_editor import ModelEditor
 from .database_access import DatabaseAccess
 from .analytics_service import AnalyticsService
 from .data_cleaning_service import DataCleaningService

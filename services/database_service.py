@@ -2,16 +2,15 @@ import os
 
 import pandas
 import pandas as pd
-from pandas import DataFrame, Series
+from pandas import DataFrame
 from sqlalchemy import create_engine, text, URL
 
 from model import DataModel
 from services import AbstractService
 from services import DatabaseAccess
-from services import ModelEditor
 
 
-class DatabaseService(AbstractService, DatabaseAccess, ModelEditor):
+class DatabaseService(AbstractService, DatabaseAccess):
     @property
     def data_files(self) -> list[str]:
         return self._data_files
@@ -85,20 +84,6 @@ class DatabaseService(AbstractService, DatabaseAccess, ModelEditor):
             )
 
         return df
-
-    # --- ModelEditor overrides ---
-
-    def create_row(self, table_name: str, columns: dict) -> bool:
-        return self._model.create_row(table_name, columns)
-
-    def read_row(self, table_name: str, primary_key: str) -> Series:
-        return self._model.read_row(table_name, primary_key)
-
-    def update_row(self, table_name: str, primary_key: str, columns: dict) -> bool:
-        return self._model.update_row(table_name, primary_key, columns)
-
-    def delete_row(self, table_name: str, primary_key: str) -> Series:
-        return self._model.delete_row(table_name, primary_key)
 
     # --- Subclass methods ---
 

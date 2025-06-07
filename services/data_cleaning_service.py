@@ -5,14 +5,14 @@ from pathlib import Path
 
 import pandas as pd
 from fuzzywuzzy import process
-from pandas import Series, DataFrame
+from pandas import DataFrame
 
 from model import DataModel
-from services import AbstractService, ModelEditor
+from services import AbstractService
 from utils import Configuration
 
 
-class DataCleaningService(AbstractService, ModelEditor):
+class DataCleaningService(AbstractService):
     @property
     def model(self) -> DataModel:
         return self._model
@@ -35,23 +35,6 @@ class DataCleaningService(AbstractService, ModelEditor):
         self._loaded_script_content = None
         self._table_name = None
         self._table: DataFrame = pd.DataFrame()
-
-    # --- ModelEditor overrides ---
-
-    def create_row(self, table_name: str, columns: dict) -> bool:
-        return self._model.create_row(table_name, columns)
-
-    def read_row(self, table_name: str, primary_key: str) -> Series:
-        return self._model.read_row(table_name, primary_key)
-
-    def update_row(self, table_name: str, primary_key: str, columns: dict) -> bool:
-        # TODO: FIX THIS
-        return self._model.update_row(table_name, primary_key, columns)
-
-    def delete_row(self, table_name: str, primary_key: str) -> Series:
-        return self._model.delete_row(table_name, primary_key)
-
-    # --- Subclass methods ---
 
     def set_and_retrieve_table(self, table_name: str) -> dict:
         self._table_name = table_name
