@@ -137,7 +137,7 @@ class AnalyticsService(AbstractService):
         series = self._table[column].dropna()
 
         # Skip empty or non-numeric columns
-        if series.empty or not (pd.api.types.is_numeric_dtype(series) or pd.api.types.is_datetime64_any_dtype(series)):
+        if series.empty or not pd.api.types.is_numeric_dtype(series) or pd.api.types.is_bool_dtype(series):
             return
 
         self._plot_data.setdefault("distributions", {})

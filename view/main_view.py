@@ -47,7 +47,7 @@ class MainView(AbstractView):
 
         self.no_database_label = QLabel("No Database Loaded")
         self.no_database_label.setFont(QFont(self.font, 24, QFont.Weight.Bold))
-        self.no_database_description = QLabel("Use the top right buttons to load a database!")
+        self.no_database_description = QLabel("Use the button in the top right to load a database!")
         self.no_database_description.setFont(QFont(self.font, 14, QFont.Weight.Normal))
 
         self.no_database_container = QWidget()

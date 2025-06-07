@@ -243,7 +243,7 @@ class AutoCleanView(AbstractView):
         self.analytics_column_config_container = QWidget()
         self.analytics_column_config_container.setLayout(QVBoxLayout())
         self.analytics_column_config_container.layout().setSpacing(0)
-        self.column_config_hint = QLabel("Note: Distribution analysis is only available for numeric, datetime, or boolean columns.")
+        self.column_config_hint = QLabel("Note: Distribution analysis is only available for numeric columns.")
         self.column_config_hint.setFont(QFont(self.font, 10))
         self.column_config_hint.setWordWrap(True)
         self.analytics_config_container.layout().addWidget(self.analytics_column_options_label)
@@ -550,8 +550,7 @@ class AutoCleanView(AbstractView):
             distribution_plot_checkbox.checkStateChanged,
             Configuration.ANALYZE_DISTRIBUTION,
             distribution_plot_checkbox.isChecked,
-            column_name,
-            True
+            column_name
         )
 
         return container

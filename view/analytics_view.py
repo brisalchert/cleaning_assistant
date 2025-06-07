@@ -4,7 +4,7 @@ import seaborn as sns
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QScrollArea, QSizePolicy, QLabel, QPushButton, QHBoxLayout, \
-    QStackedWidget, QComboBox, QLayout, QFrame
+    QStackedWidget, QComboBox, QLayout, QFrame, QLineEdit
 from pandas import DataFrame, Series
 
 from navigation import NavigationController
@@ -86,7 +86,11 @@ class AnalyticsView(AbstractView):
         self.missingness_text.setFont(QFont(self.font, 12))
         self.missingness_text.setContentsMargins(10, 10, 10, 10)
         self.missingness_plot = MplCanvas()
+        self.missingness_stats_container = QWidget()
+        self.missingness_stats_container.setLayout(QVBoxLayout())
 
+        self.missing_column_label = QLabel("Column:")
+        self.missing_column_selector = QComboBox()
         self.drop_missing_button = QPushButton("Drop Missing")
         self.impute_missing_mean_button = QPushButton("Impute Mean")
         self.impute_missing_median_button = QPushButton("Impute Median")
@@ -94,22 +98,23 @@ class AnalyticsView(AbstractView):
 
         self.missingness_button_row = QWidget()
         self.missingness_button_row.setLayout(QHBoxLayout())
-        self.missingness_button_row.layout().addWidget(self.drop_missing_button)
-        self.missingness_button_row.layout().addWidget(self.impute_missing_mean_button)
-        self.missingness_button_row.layout().addWidget(self.impute_missing_median_button)
-        self.missingness_button_row.layout().addWidget(self.impute_missing_mode_button)
+        self.missingness_button_row.layout().addStretch()
 
-        for button in [
+        for widget in [
+            self.missing_column_label,
+            self.missing_column_selector,
             self.drop_missing_button,
             self.impute_missing_mean_button,
             self.impute_missing_median_button,
             self.impute_missing_mode_button
         ]:
-            button.setFont(QFont(self.font, 12))
+            widget.setFont(QFont(self.font, 12))
+            self.missingness_button_row.layout().addWidget(widget)
 
         self.missingness_container.layout().addWidget(self.missingness_label)
         self.missingness_container.layout().addWidget(self.missingness_text)
         self.missingness_container.layout().addWidget(self.missingness_plot)
+        self.missingness_container.layout().addWidget(self.missingness_stats_container)
         self.missingness_container.layout().addWidget(self.missingness_button_row)
 
         self.analytics_container.layout().addWidget(self.missingness_container)
@@ -130,6 +135,8 @@ class AnalyticsView(AbstractView):
         self.outlier_text.setFont(QFont(self.font, 12))
         self.outlier_text.setContentsMargins(10, 10, 10, 10)
         self.outlier_plot = MplCanvas()
+        self.outlier_stats_container = QWidget()
+        self.outlier_stats_container.setLayout(QVBoxLayout())
 
         self.outlier_column_label = QLabel("Column:")
         self.outlier_column_label.setFont(QFont(self.font, 12))
@@ -151,6 +158,7 @@ class AnalyticsView(AbstractView):
         self.outlier_container.layout().addWidget(self.outlier_label)
         self.outlier_container.layout().addWidget(self.outlier_text)
         self.outlier_container.layout().addWidget(self.outlier_plot)
+        self.outlier_container.layout().addWidget(self.outlier_stats_container)
         self.outlier_container.layout().addWidget(self.outlier_button_row)
 
         self.analytics_container.layout().addWidget(self.outlier_container)
@@ -171,11 +179,64 @@ class AnalyticsView(AbstractView):
         self.distribution_text.setFont(QFont(self.font, 12))
         self.distribution_text.setContentsMargins(10, 10, 10, 10)
         self.distribution_plots = {}
+        self.distribution_plots_container = QWidget()
+        self.distribution_plots_container.setLayout(QVBoxLayout())
 
         self.distribution_container.layout().addWidget(self.distribution_label)
         self.distribution_container.layout().addWidget(self.distribution_text)
+        self.distribution_container.layout().addWidget(self.distribution_plots_container)
 
         self.analytics_container.layout().addWidget(self.distribution_container)
+
+        distribution_separator = QFrame()
+        distribution_separator.setFrameShape(QFrame.Shape.HLine)
+        distribution_separator.setFrameShadow(QFrame.Shadow.Sunken)
+        self.analytics_container.layout().addWidget(distribution_separator)
+
+        # Category stats
+        self.categories_container = QWidget()
+        self.categories_container.setLayout(QVBoxLayout())
+        self.categories_container.layout().setContentsMargins(10, 10, 10, 10)
+        self.categories_label = QLabel("Category Statistics")
+        self.categories_label.setFont(QFont(self.font, 14))
+        self.categories_text = QLabel()
+        self.categories_text.setWordWrap(True)
+        self.categories_text.setFont(QFont(self.font, 12))
+        self.categories_text.setContentsMargins(10, 10, 10, 10)
+        self.category_stats_container = QWidget()
+        self.category_stats_container.setLayout(QVBoxLayout())
+
+        self.category_selector_label = QLabel("Category:")
+        self.category_selector_label.setFont(QFont(self.font, 14))
+        self.category_correction_selector = QComboBox()
+        self.category_correction_selector.setFont(QFont(self.font, 12))
+        self.category_correction_label = QLabel("Correction Mapping:")
+        self.category_correction_label.setFont(QFont(self.font, 14))
+        self.category_correction_input = QLineEdit()
+        self.category_correction_input.setPlaceholderText("Format: [incorrect_category]: [correct_category]")
+        self.category_correction_input.setFont(QFont(self.font, 12))
+        self.category_correction_button = QPushButton("Correct Categories")
+        self.category_correction_button.setFont(QFont(self.font, 12))
+
+        self.category_selector_container = QWidget()
+        self.category_selector_container.setLayout(QHBoxLayout())
+        self.category_selector_container.layout().addWidget(self.category_selector_label)
+        self.category_selector_container.layout().addWidget(self.category_correction_selector)
+        self.category_selector_container.layout().addStretch()
+
+        self.category_correction_container = QWidget()
+        self.category_correction_container.setLayout(QHBoxLayout())
+        self.category_correction_container.layout().addWidget(self.category_correction_label)
+        self.category_correction_container.layout().addWidget(self.category_correction_input)
+        self.category_correction_container.layout().addWidget(self.category_correction_button)
+
+        self.categories_container.layout().addWidget(self.categories_label)
+        self.categories_container.layout().addWidget(self.categories_text)
+        self.categories_container.layout().addWidget(self.category_stats_container)
+        self.categories_container.layout().addWidget(self.category_selector_container)
+        self.categories_container.layout().addWidget(self.category_correction_container)
+
+        self.analytics_container.layout().addWidget(self.categories_container)
 
         # Navigation
         self.setup_navigation()
@@ -208,11 +269,79 @@ class AnalyticsView(AbstractView):
         self._nav_analytics.setChecked(True)
 
     def update_stats(self, stats: dict):
-        pass
+        # Update missingness stats
+        if "missingness" in stats:
+            layout = self.missingness_stats_container.layout()
+
+            # Remove existing widgets from layout
+            while layout.count():
+                item = layout.takeAt(0)
+                widget = item.widget()
+                if widget:
+                    widget.deleteLater()
+
+            # Add statistics
+            for column, missing in stats["missingness"].items():
+                statistic = QLabel(f"Missing in \"{column}\": {round(missing, 2)}%")
+                statistic.setFont(QFont(self.font, 12))
+                layout.addWidget(statistic)
+
+        # Update outlier stats
+        if "outliers" in stats:
+            layout = self.outlier_stats_container.layout()
+
+            # Remove existing widgets from layout
+            while layout.count():
+                item = layout.takeAt(0)
+                widget = item.widget()
+                if widget:
+                    widget.deleteLater()
+
+            # Add statistics
+            for column, outliers in stats["outliers"].items():
+                upper = QLabel(f"Upper outliers in \"{column}\": {outliers["upper"]}")
+                lower = QLabel(f"Lower outliers in \"{column}\": {outliers["lower"]}")
+                upper.setFont(QFont(self.font, 12))
+                lower.setFont(QFont(self.font, 12))
+                layout.addWidget(upper)
+                layout.addWidget(lower)
+
+        # Update category stats
+        if "categories" in stats:
+            self.categories_container.setVisible(True)
+            layout = self.category_stats_container.layout()
+
+            # Remove existing widgets from layout
+            while layout.count():
+                item = layout.takeAt(0)
+                widget = item.widget()
+                if widget:
+                    widget.deleteLater()
+
+            # Clear selector
+            self.category_correction_selector.clear()
+
+            # Add statistics
+            for column, categories in stats["categories"].items():
+                column_label = QLabel(f"Categories in \"{column}\": {len(categories)}")
+                column_label.setFont(QFont(self.font, 12))
+                layout.addWidget(column_label)
+
+                # Add category to selector
+                self.category_correction_selector.addItem(column)
+
+                # Add counts for category
+                for category, count in categories.items():
+                    count_label = QLabel(f"\tCount for \"{category}\": {count}")
+                    count_label.setFont(QFont(self.font, 12))
+                    layout.addWidget(count_label)
+        else:
+            self.categories_container.setVisible(False)
 
     def update_plots(self, plot_data: dict):
         # Update missingness plot
         if "missingness" in plot_data:
+            self.missingness_container.setVisible(True)
             layout = self.missingness_container.layout()
 
             # Find index of missingness plot
@@ -224,8 +353,17 @@ class AnalyticsView(AbstractView):
 
             self.create_missingness_plot(plot_data["missingness"], target_index)
 
+            # Update column selector options
+            self.missing_column_selector.clear()
+
+            for column in plot_data["missingness"].columns:
+                self.missing_column_selector.addItem(column)
+        else:
+            self.missingness_container.setVisible(False)
+
         # Update outlier plot
         if "outliers" in plot_data:
+            self.outlier_container.setVisible(True)
             layout = self.outlier_container.layout()
 
             # Find index of outlier plot
@@ -244,20 +382,34 @@ class AnalyticsView(AbstractView):
 
             for column in plot_data["outliers"].columns:
                 self.outlier_column_selector.addItem(column)
+        else:
+            self.outlier_container.setVisible(False)
 
         # Update distribution plots
         if "distributions" in plot_data:
-            layout = self.distribution_container.layout()
+            self.distribution_container.setVisible(True)
+            layout = self.distribution_plots_container.layout()
 
+            # Clear distribution plots
+            while layout.count():
+                item = layout.takeAt(0)
+                widget = item.widget()
+                if widget:
+                    widget.deleteLater()
+
+            # Plot distributions
             for column, series in plot_data["distributions"].items():
                 self.create_distribution_plot(column, series)
 
                 standardize_button = QPushButton(f"Standardize \"{column}\" Distribution")
                 standardize_button.setFont(QFont(self.font, 12))
+                standardize_button.setContentsMargins(5, 5, 5, 5)
                 standardize_button.clicked.connect(lambda: self._view_model.apply_suggestion(Operation.STANDARDIZE, column))
 
                 layout.addWidget(self.distribution_plots[column])
                 layout.addWidget(standardize_button)
+        else:
+            self.distribution_container.setVisible(False)
 
     def update_suggestions(self, suggestions: dict):
         # Update missingness suggestions
@@ -274,14 +426,16 @@ class AnalyticsView(AbstractView):
 
         # Update category suggestions
         if "categories" in suggestions:
-            # self.categories_text.setText(suggestions["categories"])
-            pass
+            self.categories_text.setText(suggestions["categories"])
 
     def update_analytics(self, available: bool):
         if available:
             self.analytics_container_stack.setCurrentIndex(1)
         else:
             self.analytics_container_stack.setCurrentIndex(0)
+
+        self.stats_export_button.setEnabled(available)
+        self.plots_export_button.setEnabled(available)
 
     def get_plot_index(self, plot_widget: QWidget, layout: QLayout):
         index = -1
@@ -307,6 +461,9 @@ class AnalyticsView(AbstractView):
         ax = canvas.ax
         msno.matrix(df, ax=ax, sparkline=False)
         ax.set_title("Missingness Distribution per Column")
+        ax.tick_params(axis='x', labelsize=11)
+        ax.tick_params(axis='y', labelsize=11)
+        canvas.fig.subplots_adjust(left = 0.10, right = 0.95, top = 0.65, bottom = 0.10)
         canvas.draw()
 
         # Add plot to layout
@@ -328,6 +485,7 @@ class AnalyticsView(AbstractView):
         sns.boxplot(x="column", y="value", data=df, showfliers=True, ax=ax)
         ax.set_title("Boxplot for Outliers (Numeric, Dates, and String Lengths [Normalized])")
         ax.tick_params(axis='x', labelrotation=45)
+        canvas.fig.subplots_adjust(left = 0.10, right = 0.95, top = 0.90, bottom = 0.30)
         canvas.draw()
 
         # Add plot to layout
@@ -339,9 +497,10 @@ class AnalyticsView(AbstractView):
         canvas = MplCanvas()
         ax = canvas.ax
         sns.histplot(distribution, kde=False, bins=30, ax=ax)
-        ax.set_title(f"Distribution Plot for {column.title()}")
+        ax.set_title(f"Distribution Plot for \"{column}\"")
         ax.set_xlabel("Value")
         ax.set_ylabel("Frequency")
+        canvas.fig.subplots_adjust(left = 0.10, right = 0.95, top = 0.85, bottom = 0.15)
         canvas.draw()
 
         # Add plot to plot dictionary
