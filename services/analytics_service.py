@@ -110,8 +110,8 @@ class AnalyticsService(AbstractService, ModelEditor):
 
         df_outliers = self.get_outlier_columns()
         for column in df_outliers.columns:
-            q1 = self._table[column].quantile(0.25)
-            q3 = self._table[column].quantile(0.75)
+            q1 = df_outliers[column].quantile(0.25)
+            q3 = df_outliers[column].quantile(0.75)
             iqr = q3 - q1
 
             lower_bound = q1 - 1.5 * iqr
@@ -125,14 +125,17 @@ class AnalyticsService(AbstractService, ModelEditor):
                 "upper": upper_outlier_count,
             }
 
-    def create_missingness_plot(self, canvas: MplCanvas):
-        canvas.fig.clear()
+    def create_missingness_plot(self):
+        canvas = MplCanvas()
         ax = canvas.fig.add_subplot(111)
         msno.matrix(self._table, ax=ax, sparkline=False)
         ax.set_title("Missingness Distribution per Column")
         canvas.draw()
 
-    def create_outlier_plot(self, canvas: MplCanvas):
+        # Add canvas to plots
+        self._plots["missingness"] = canvas
+
+    def create_outlier_plot(self):
         df_combined = self.get_outlier_columns()
 
         # Normalize column values
@@ -147,21 +150,30 @@ class AnalyticsService(AbstractService, ModelEditor):
 
         df_melted = df_normalized.melt(var_name="column", value_name="value").dropna()
 
-        canvas.fig.clear()
+        canvas = MplCanvas()
         ax = canvas.fig.add_subplot(111)
         sns.boxplot(x="column", y="value", data=df_melted, showfliers=True, ax=ax)
         ax.set_title("Boxplot for Outliers (Numeric, Dates, and String Lengths [Normalized])")
         ax.tick_params(axis='x', labelrotation=45)
         canvas.draw()
 
-    def create_distribution_plot(self, column: str, canvas: MplCanvas):
-        canvas.fig.clear()
+        # Add canvas to plots
+        self._plots["outliers"] = canvas
+
+    def create_distribution_plot(self, column: str):
+        canvas = MplCanvas()
         ax = canvas.fig.add_subplot(111)
         sns.histplot(self._table[column], kde=True, bins = 30, ax=ax)
         ax.set_title(f"Distribution Plot for {column.title()}")
         ax.set_xlabel("Value")
         ax.set_ylabel("Frequency")
         canvas.draw()
+
+        # Add canvas to plots
+        if self._plots["distributions"] is None:
+            self._plots["distributions"] = {}
+
+        self._plots["distributions"][column] = canvas
 
     def generate_suggestions(self):
         self._suggestions["missingness"] = """If a column contains only 5% or fewer missing values,

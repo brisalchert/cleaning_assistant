@@ -119,7 +119,9 @@ class DataCleaningService(AbstractService, ModelEditor):
 
     def impute_missing_mode(self, column: str) -> int:
         before = self._table[column].isna().sum()
-        self._table = self._table[column].fillna(self._table.mode())
+        mode_value = self._table[column].mode().iloc[0] if not self._table[column].mode().empty else None
+        if mode_value is not None:
+            self._table[column] = self._table[column].fillna(mode_value)
         after = self._table[column].isna().sum()
         self._model.set_table(self._table_name, self._table)
 
@@ -134,7 +136,7 @@ class DataCleaningService(AbstractService, ModelEditor):
 
     def drop_missing(self, column: str) -> int:
         before = len(self._table)
-        self._table[column] = self._table[column].dropna()
+        self._table = self._table.dropna(subset=[column])
         after = len(self._table)
         self._model.set_table(self._table_name, self._table)
 
@@ -163,7 +165,7 @@ class DataCleaningService(AbstractService, ModelEditor):
 
         return changed
 
-    def autocorrect_categories(self, column: str, correct_categories: list) -> int:
+    def autocorrect_categories(self, column: str, correct_categories: list[str]) -> int:
         original = self._table[column].copy()
         self._table[column] = self._table[column].apply(lambda row: correct_spelling(row, correct_categories))
         changed = self._table[column][original != self._table[column]].count()
@@ -189,7 +191,7 @@ class DataCleaningService(AbstractService, ModelEditor):
         return changed
 
     def rename_column(self, column: str, new_name: str):
-        self._table[column] = self._table[column].rename(new_name)
+        self._table = self._table.rename(columns={column: new_name})
         self._model.set_table(self._table_name, self._table)
 
     def get_data_type(self, column: str):
@@ -235,7 +237,7 @@ class DataCleaningService(AbstractService, ModelEditor):
     def drop_date_outliers(self, column: str, minimum = None, maximum = None) -> int:
         if minimum is not None and maximum is not None:
             before = len(self._table)
-            self._table[column] = self._table[(self._table[column] >= minimum) & (self._table[column] <= maximum)]
+            self._table = self._table[(self._table[column] >= minimum) & (self._table[column] <= maximum)]
             after = len(self._table)
             self._model.set_table(self._table_name, self._table)
 
@@ -244,7 +246,7 @@ class DataCleaningService(AbstractService, ModelEditor):
 
     def set_cleaning_script(self, script: str):
         # Validate cleaning script before loading
-        if script.__contains__("# CLEANING ASSISTANT SCRIPT FILE"):
+        if "# CLEANING ASSISTANT SCRIPT FILE" in script:
             self._cleaning_script = script
 
     def generate_cleaning_script(self, config: dict):
@@ -321,6 +323,9 @@ class DataCleaningService(AbstractService, ModelEditor):
         self._cleaning_script = "\n".join(lines)
 
     def save_cleaning_script(self, directory: str):
+        if self._cleaning_script is None:
+            raise ValueError("No cleaning script has been generated.")
+
         folder = Path(directory)
         folder.mkdir(parents=True, exist_ok=True)
 
@@ -335,9 +340,6 @@ class DataCleaningService(AbstractService, ModelEditor):
 
         lines = self._loaded_script_content.splitlines()
         if not lines[-1].startswith("# CLEANING ASSISTANT SCRIPT FILE"):
-            return False
-
-        if not lines[9].startswith("df = pd.read_csv"):
             return False
 
         # Temporarily place CSV file in current directory
@@ -355,7 +357,7 @@ class DataCleaningService(AbstractService, ModelEditor):
 
         self._model.get_table(table_name).to_csv(csv_path, index=False)
 
-        subprocess.run(
+        result = subprocess.run(
             ["python", script_path],
             capture_output=True,
             text=True
@@ -365,10 +367,16 @@ class DataCleaningService(AbstractService, ModelEditor):
         if os.path.exists(csv_path):
             os.remove(csv_path)
 
+        if result.returncode != 0:
+            return False
+
         return True
 
 def correct_spelling(row, categories: list):
     """Support function for correcting category spelling errors"""
+    if pd.isna(row):
+        return row
+
     match = process.extractOne(row, categories)
     if match[1] >= 80: # Similarity score threshold for replacement
         return match[0]

@@ -246,7 +246,7 @@ class AutoCleanView(AbstractView):
         self.analytics_config_container.layout().addWidget(self.analytics_column_config_container)
 
         # Missing values
-        self.missingness_analysis_label = QLabel("Missing values:")
+        self.missingness_analysis_label = QLabel("Missing Values:")
         self.missingness_analysis_label.setFont(QFont(self.font, 12))
         self.missingness_plot_checkbox = QCheckBox("Analyze missingness pattern")
         self.missingness_plot_checkbox.setFont(QFont(self.font, 10))
@@ -272,6 +272,21 @@ class AutoCleanView(AbstractView):
             self.category_analysis_checkbox.checkStateChanged,
             Configuration.ANALYZE_CATEGORIES,
             self.category_analysis_checkbox.isChecked,
+            update_on_init=True
+        )
+
+        # Outliers
+        self.outlier_analysis_label = QLabel("Outlier Analysis:")
+        self.outlier_analysis_label.setFont(QFont(self.font, 12))
+        self.outlier_analysis_checkbox = QCheckBox("Analyze outliers")
+        self.outlier_analysis_checkbox.setFont(QFont(self.font, 10))
+        self.analytics_config_container.layout().addWidget(self.outlier_analysis_label)
+        self.analytics_config_container.layout().addWidget(self.outlier_analysis_checkbox)
+
+        self.bind_analysis_config_update(
+            self.outlier_analysis_checkbox.checkStateChanged,
+            Configuration.ANALYZE_OUTLIERS,
+            self.outlier_analysis_checkbox.isChecked,
             update_on_init=True
         )
 
@@ -424,6 +439,12 @@ class AutoCleanView(AbstractView):
         category_names_container = QWidget()
         category_names_container.setLayout(QHBoxLayout())
         categories = self.append_category_select_widget(category_names_container, "Categories:")
+        category_widget_container = QWidget()
+        category_widget_container.setLayout(QVBoxLayout())
+        input_hint = QLabel("Separate categories with spaces and no commas.")
+        input_hint.setFont(QFont(self.font, 10))
+        category_widget_container.layout().addWidget(category_names_container)
+        category_widget_container.layout().addWidget(input_hint)
 
         # Stacked widget for data type cleaning options
         data_type_config_stack = QStackedWidget()
@@ -433,7 +454,7 @@ class AutoCleanView(AbstractView):
         data_type_config_stack.layout().addWidget(QWidget()) # Empty for "bool" type
         data_type_config_stack.layout().addWidget(string_length_container)
         data_type_config_stack.layout().addWidget(date_range_container)
-        data_type_config_stack.layout().addWidget(category_names_container)
+        data_type_config_stack.layout().addWidget(category_widget_container)
         data_type_config_stack.layout().addWidget(QWidget()) # Empty for "object" type
 
         # Connect selector to changes in stacked widget display
@@ -514,28 +535,17 @@ class AutoCleanView(AbstractView):
         distribution_plot_checkbox = QCheckBox("Analyze data distribution")
         distribution_plot_checkbox.setFont(QFont(self.font, 10))
 
-        outlier_plot_checkbox = QCheckBox("Analyze outliers")
-        outlier_plot_checkbox.setFont(QFont(self.font, 10))
-
         container = QWidget()
         container.setLayout(QVBoxLayout())
         container.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         container.layout().addWidget(column_name_label)
         container.layout().addWidget(distribution_plot_checkbox)
-        container.layout().addWidget(outlier_plot_checkbox)
 
         # Connect selector signals to analysis configuration
         self.bind_analysis_config_update(
             distribution_plot_checkbox.checkStateChanged,
             Configuration.ANALYZE_DISTRIBUTION,
             distribution_plot_checkbox.isChecked,
-            column_name,
-            True
-        )
-        self.bind_analysis_config_update(
-            outlier_plot_checkbox.checkStateChanged,
-            Configuration.ANALYZE_OUTLIERS,
-            outlier_plot_checkbox.isChecked,
             column_name,
             True
         )

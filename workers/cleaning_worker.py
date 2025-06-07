@@ -37,7 +37,7 @@ class CleaningWorker(QObject):
                         types_changed = self.data_cleaning_service.set_data_type(column, value)
                         self.data_types_converted.emit(types_changed)
                         self.cleaning_operations.emit(self.data_cleaning_service.get_table_length() * types_changed)
-                        self.progress.emit(10)
+                        self.progress.emit(20)
                     elif key == Configuration.INT_MIN:
                         self.step.emit("Removing integer outliers...")
                         min_int = int(value) if value != "" else float("-inf")
@@ -69,7 +69,7 @@ class CleaningWorker(QObject):
                         max_length = int(value) if value != "" else 1000000
                         changed = self.data_cleaning_service.truncate_strings(column, max_length)
                         self.cleaning_operations.emit(changed)
-                        self.progress.emit(30)
+                        self.progress.emit(20)
                     elif key == Configuration.DATE_MIN:
                         self.step.emit("Removing date outliers...")
                         dropped = self.data_cleaning_service.drop_date_outliers(column, pd.to_datetime(value), pd.to_datetime("2100-01-01"))
@@ -80,14 +80,14 @@ class CleaningWorker(QObject):
                         dropped = self.data_cleaning_service.drop_date_outliers(column, pd.to_datetime("1900-01-01"), pd.to_datetime(value))
                         self.outliers_removed.emit(dropped)
                         self.cleaning_operations.emit(dropped)
-                        self.progress.emit(30)
+                        self.progress.emit(20)
                     elif key == Configuration.CATEGORIES:
                         self.step.emit("Correcting categories...")
                         if value != "":
-                            changed = self.data_cleaning_service.autocorrect_categories(column, value.split()) # TODO: Make note of splitting on whitespace
+                            changed = self.data_cleaning_service.autocorrect_categories(column, value.split())
                             self.cleaning_operations.emit(changed)
 
-            self.progress.emit(40)
+            self.progress.emit(50)
 
             # General cleaning
             if self.cleaning_config[Configuration.DELETE_DUPLICATES]:
@@ -115,19 +115,41 @@ class CleaningWorker(QObject):
                 self.cleaning_operations.emit(imputed)
 
             self.progress.emit(75)
+
             self.step.emit("Generating cleaning script...")
             self.data_cleaning_service.generate_cleaning_script(self.cleaning_config)
-
             self.progress.emit(80)
-            self.step.emit("Gathering analytics...")
-            # TODO: Add analytics gathering
-            self.analytics_service.create_missingness_plot(MplCanvas())
-            self.progress.emit(85)
-            self.analytics_service.create_outlier_plot(MplCanvas())
-            self.progress.emit(95)
-            self.analytics_service.create_distribution_plot("release_date", MplCanvas())
 
+            self.step.emit("Gathering analytics...")
+
+            # # Column-specific analytics
+            # for column, options in self.analytics_config[Configuration.COLUMNS].items():
+            #     for key, value in options.items():
+            #         if key == Configuration.ANALYZE_DISTRIBUTION:
+            #             self.step.emit("Generating column distribution plots...")
+            #             self.analytics_service.create_distribution_plot(column)
+
+            self.progress.emit(85)
+
+            # General analytics
+            self.step.emit("Analyzing missingness...")
+            self.analytics_service.create_missingness_plot()
+            self.analytics_service.calculate_missingness_stats()
+            self.progress.emit(90)
+
+            self.step.emit("Analyzing categories...")
+            self.analytics_service.calculate_category_stats()
+            self.progress.emit(95)
+
+            self.step.emit("Analyzing outliers...")
+            self.analytics_service.create_outlier_plot()
+            self.analytics_service.calculate_outlier_stats()
+            self.progress.emit(99)
+
+            self.step.emit("Generating suggestions...")
+            self.analytics_service.generate_suggestions()
             self.progress.emit(100)
+
             self.finished.emit(True)
 
         except Exception as e:
