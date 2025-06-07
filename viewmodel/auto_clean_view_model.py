@@ -110,6 +110,7 @@ class AutoCleanViewModel(ViewModel):
 
         # Reset stats
         self.init_cleaning_stats()
+        self.analytics_service.reset_analytics()
 
         # Connect signals and slots
         self.worker.finished.connect(on_finished)

@@ -34,9 +34,9 @@ class AnalyticsService(AbstractService, ModelEditor):
         self._analytics_config = None
         self._table_name = None
         self._table: DataFrame = pd.DataFrame()
-        self._statistics = None
-        self._plots = None
-        self._suggestions = None
+        self._statistics = {}
+        self._plots = {}
+        self._suggestions = {}
 
     # --- ModelEditor overrides ---
 
@@ -58,29 +58,18 @@ class AnalyticsService(AbstractService, ModelEditor):
         self._table_name = table_name
         self._table = self._model.get_table(table_name)
 
+    def reset_analytics(self):
+        self._statistics = {}
+        self._plots = {}
+        self._suggestions = {}
+
     def set_analytics_config(self, analytics_config):
         self._analytics_config = analytics_config
 
-    def calculate_missingness_stats(self):
-        # TODO: Implement calculate_missingness_stats
-        pass
-
-    def calculate_category_stats(self):
-        # TODO: Implement calculate_category_stats
-        pass
-
-    def calculate_outlier_stats(self):
-        # TODO: Implement calculate_outlier_stats
-        pass
-
-    def create_missingness_plot(self, canvas: MplCanvas):
-        canvas.fig.clear()
-        ax = canvas.fig.add_subplot(111)
-        msno.matrix(self._table, ax=ax, sparkline=False)
-        ax.set_title("Missingness Distribution per Column")
-        canvas.draw()
-
-    def create_outlier_plot(self, canvas: MplCanvas):
+    def get_outlier_columns(self) -> DataFrame:
+        """Returns a DataFrame with only the columns of the current table that
+        are relevant for outlier calculations. This includes numeric columns,
+        datetime columns, and the lengths of string/object columns."""
         df_numeric = self._table.select_dtypes(include="number")
         df_dates = self._table.select_dtypes(include=["datetime", "datetime64[ns]"]).copy()
         df_strings = self._table.select_dtypes(include=["object", "string"]).copy()
@@ -97,6 +86,54 @@ class AnalyticsService(AbstractService, ModelEditor):
 
         # Combine all DataFrames
         df_combined = pd.concat([df_numeric, df_dates, df_strings], axis=1)
+
+        return df_combined
+
+    def calculate_missingness_stats(self):
+        self._statistics["missingness"] = {}
+
+        for column in self._table.columns:
+            missing = self._table[column].isna().sum()
+            percent_missing = missing / len(self._table) * 100
+            self._statistics["missingness"][column] = percent_missing
+
+    def calculate_category_stats(self):
+        self._statistics["categories"] = {}
+
+        for column in self._table.columns:
+            if self._table[column].dtype == "category":
+                category_counts = self._table[column].value_counts()
+                self._statistics["categories"][column] = category_counts.to_dict()
+
+    def calculate_outlier_stats(self):
+        self._statistics["outliers"] = {}
+
+        df_outliers = self.get_outlier_columns()
+        for column in df_outliers.columns:
+            q1 = self._table[column].quantile(0.25)
+            q3 = self._table[column].quantile(0.75)
+            iqr = q3 - q1
+
+            lower_bound = q1 - 1.5 * iqr
+            upper_bound = q3 + 1.5 * iqr
+
+            lower_outlier_count = df_outliers[df_outliers[column] < lower_bound].shape[0]
+            upper_outlier_count = df_outliers[df_outliers[column] > upper_bound].shape[0]
+
+            self._statistics["outliers"][column] = {
+                "lower": lower_outlier_count,
+                "upper": upper_outlier_count,
+            }
+
+    def create_missingness_plot(self, canvas: MplCanvas):
+        canvas.fig.clear()
+        ax = canvas.fig.add_subplot(111)
+        msno.matrix(self._table, ax=ax, sparkline=False)
+        ax.set_title("Missingness Distribution per Column")
+        canvas.draw()
+
+    def create_outlier_plot(self, canvas: MplCanvas):
+        df_combined = self.get_outlier_columns()
 
         # Normalize column values
         def min_max_norm(series):

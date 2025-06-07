@@ -27,8 +27,6 @@ class CleaningWorker(QObject):
     def run(self):
         """Apply the cleaning and analytics scripts using a separate thread."""
         try:
-            # TODO: Fix unrecognized missing values (such as "None" or "0")
-
             self.step.emit("Starting cleaning script...")
 
             # Column-specific cleaning

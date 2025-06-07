@@ -30,6 +30,7 @@ class DataCleaningService(AbstractService, ModelEditor):
     def __init__(self, model: DataModel):
         self._model = model
         self._cleaning_script = None
+        self._loaded_script_content = None
         self._table_name = None
         self._table: DataFrame = pd.DataFrame()
 
@@ -189,15 +190,23 @@ class DataCleaningService(AbstractService, ModelEditor):
         return before - after
 
     def get_outliers(self, column: str) -> DataFrame:
-        q_low = self._table[column].quantile(0.01)
-        q_high = self._table[column].quantile(0.99)
+        q1 = self._table[column].quantile(0.25)
+        q3 = self._table[column].quantile(0.75)
+        iqr = q3 - q1
 
-        df_outliers = self._table[(self._table[column] < q_low) | (self._table[column] > q_high)]
+        lower_bound = q1 - 1.5 * iqr
+        upper_bound = q3 + 1.5 * iqr
+
+        df_outliers = self._table[(self._table[column] < lower_bound) | (self._table[column] > upper_bound)]
         return df_outliers
 
     def drop_outliers(self, column: str, minimum: float = None, maximum: float = None) -> int:
         if minimum is None or maximum is None:
-            minimum, maximum = self._table[column].quantile(0.01), self._table[column].quantile(0.99)
+            q1 = self._table[column].quantile(0.25)
+            q3 = self._table[column].quantile(0.75)
+            iqr = q3 - q1
+
+            minimum, maximum = q1 - 1.5 * iqr, q3 + 1.5 * iqr
 
         before = len(self._table)
         self._table = self._table[(self._table[column] >= minimum) & (self._table[column] <= maximum)]
@@ -298,12 +307,12 @@ class DataCleaningService(AbstractService, ModelEditor):
         file_path.write_text(self._cleaning_script)
 
     def apply_cleaning_script(self, script_path: str):
-        content = ""
+        self._loaded_script_content = ""
 
         with open(script_path, "r") as file:
-            content = file.read()
+            self._loaded_script_content = file.read()
 
-        lines = content.splitlines()
+        lines = self._loaded_script_content.splitlines()
         if not lines[-1].startswith("# CLEANING ASSISTANT SCRIPT FILE"):
             return
 
