@@ -41,6 +41,7 @@ class AutoCleanViewModel(ViewModel):
 
     def set_table(self, table_name: str):
         self._table = self.data_cleaning_service.set_and_retrieve_table(table_name)
+        self.analytics_service.set_table(table_name)
         self.table_changed.emit(self._table)
 
     def set_nav_destination(self, destination: Screen):
@@ -139,7 +140,7 @@ class AutoCleanViewModel(ViewModel):
         self._cleaning_running = True
         self.cleaning_running_changed.emit(self._cleaning_running)
 
-        self.worker = CleaningWorker(self.data_cleaning_service, self._cleaning_config, self._analytics_config)
+        self.worker = CleaningWorker(self.data_cleaning_service, self.analytics_service, self._cleaning_config, self._analytics_config)
         self.start_worker(self.on_run_finished, self.cleaning_error, self.progress_updated, self.current_step_changed)
 
     def on_run_finished(self, success: bool):

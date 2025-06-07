@@ -451,6 +451,7 @@ class AutoCleanView(AbstractView):
 
         # Connect selector to changes in stacked widget display
         data_type_select.currentIndexChanged.connect(data_type_config_stack.setCurrentIndex)
+        data_type_config_stack.setCurrentIndex(data_type_select.currentIndex())
 
         container = QWidget()
         container.setLayout(QVBoxLayout())
