@@ -1,3 +1,7 @@
+import json
+import os
+from pathlib import Path
+
 from PyQt6.QtCore import pyqtSignal
 
 from navigation import Screen
@@ -24,9 +28,9 @@ class AnalyticsViewModel(ViewModel):
         self.analytics_service = analytics_service
         self._notifier = analytics_notifier
         self._nav_destination = Screen.ANALYTICS
-        self._statistics = None
-        self._plot_data = None
-        self._suggestions = None
+        self.statistics = None
+        self.plot_data = None
+        self.suggestions = None
 
         # Connect to analytics notifier
         self._notifier.statistics_updated.connect(self.on_statistics_updated)
@@ -39,15 +43,15 @@ class AnalyticsViewModel(ViewModel):
         self.nav_destination_changed.emit(destination)
 
     def on_statistics_updated(self, statistics: dict):
-        self._statistics = statistics
+        self.statistics = statistics
         self.stats_updated.emit(statistics)
 
     def on_plot_data_updated(self, plot_data: dict):
-        self._plot_data = plot_data
+        self.plot_data = plot_data
         self.plot_data_updated.emit(plot_data)
 
     def on_suggestions_updated(self, suggestions: dict):
-        self._suggestions = suggestions
+        self.suggestions = suggestions
         self.suggestions_updated.emit(suggestions)
 
     def on_analytics_updated(self, available: bool):
@@ -57,10 +61,26 @@ class AnalyticsViewModel(ViewModel):
         # TODO: Implement apply_suggestion
         pass
 
-    def save_stats(self):
-        # TODO: Implement save_stats
-        pass
+    def save_stats(self, directory: str):
+        filename = "cleaning_statistics.json"
+        file_path = Path(f"{directory}/{filename}")
 
-    def save_plots(self):
-        # TODO: Implement save_plots
-        pass
+        with open(file_path, "w") as file:
+            json.dump(self.statistics, file, indent=4)
+
+    def save_plots(self, directory: str, missing_plot=None, outlier_plot=None, distribution_plots=None):
+        path = Path(f"{directory}/cleaning_assistant_plots")
+        path.mkdir(parents=True, exist_ok=True)
+
+        if missing_plot:
+            file_path = Path(f"{path}/missingness.png")
+            missing_plot.fig.savefig(file_path)
+
+        if outlier_plot:
+            file_path = Path(f"{path}/outliers.png")
+            outlier_plot.fig.savefig(file_path)
+
+        if distribution_plots:
+            for column, plot in distribution_plots.items():
+                file_path = Path(f"{path}/{column}_distribution.png")
+                plot.fig.savefig(file_path)

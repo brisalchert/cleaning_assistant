@@ -4,7 +4,7 @@ import seaborn as sns
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QScrollArea, QSizePolicy, QLabel, QPushButton, QHBoxLayout, \
-    QStackedWidget, QComboBox, QLayout, QFrame, QLineEdit
+    QStackedWidget, QComboBox, QLayout, QFrame, QLineEdit, QFileDialog
 from pandas import DataFrame, Series
 
 from navigation import NavigationController
@@ -34,11 +34,9 @@ class AnalyticsView(AbstractView):
         self.stats_export_button = QPushButton("Save Statistics")
         self.stats_export_button.setFont(QFont(self.font, 14))
         self.stats_export_button.setEnabled(False)
-        self.stats_export_button.clicked.connect(self.export_stats)
         self.plots_export_button = QPushButton("Save Plots")
         self.plots_export_button.setFont(QFont(self.font, 14))
         self.plots_export_button.setEnabled(False)
-        self.plots_export_button.clicked.connect(self.export_plots)
 
         self.header_group = QWidget()
         self.header_group.setLayout(QHBoxLayout())
@@ -260,6 +258,10 @@ class AnalyticsView(AbstractView):
         self._view_model.plot_data_updated.connect(self.update_plots)
         self._view_model.suggestions_updated.connect(self.update_suggestions)
         self._view_model.analytics_updated.connect(self.update_analytics)
+
+        # Connect UI to ViewModel
+        self.stats_export_button.clicked.connect(self.export_stats)
+        self.plots_export_button.clicked.connect(self.on_export_plots)
 
         # Connect navigation controller to UI
         self._nav_controller.nav_destination_changed.connect(self.update_nav_bar)
@@ -507,9 +509,22 @@ class AnalyticsView(AbstractView):
         self.distribution_plots[column] = canvas
 
     def export_stats(self):
-        # TODO: Implement export_stats
-        pass
+        export_dialog = QFileDialog()
+        directory = export_dialog.getExistingDirectory(self, "Select Directory", ".", QFileDialog.Option.ShowDirsOnly)
 
-    def export_plots(self, plot_name: str):
-        # TODO: Implement export_plots
-        pass
+        if directory:
+            self._view_model.save_stats(directory)
+
+    def export_plots(self, missing_plot=None, outlier_plot=None, distribution_plots=None):
+        export_dialog = QFileDialog()
+        directory = export_dialog.getExistingDirectory(self, "Select Directory", ".", QFileDialog.Option.ShowDirsOnly)
+
+        if directory:
+            self._view_model.save_plots(directory, missing_plot, outlier_plot, distribution_plots)
+
+    def on_export_plots(self):
+        missing_plot = self.missingness_plot if "missingness" in self._view_model.plot_data else None
+        outlier_plot = self.outlier_plot if "outliers" in self._view_model.plot_data else None
+        distribution_plots = self.distribution_plots if "distributions" in self._view_model.plot_data else None
+
+        self.export_plots(missing_plot, outlier_plot, distribution_plots)
