@@ -34,6 +34,7 @@ class AnalyticsView(AbstractView):
         self.stats_export_button.clicked.connect(self.export_stats)
         self.plots_export_button = QPushButton("Save Plots")
         self.plots_export_button.setFont(QFont(self.font, 14))
+        self.plots_export_button.setEnabled(False)
         self.plots_export_button.clicked.connect(self.export_plots)
 
         self.header_group = QWidget()

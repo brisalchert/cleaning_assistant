@@ -2,7 +2,7 @@ from PyQt6.QtCore import pyqtSignal, QThread
 
 from navigation import Screen
 from services import DataCleaningService, AnalyticsService, DatabaseService
-from utils import Configuration
+from utils import Configuration, AnalyticsNotifier
 from viewmodel import ViewModel
 from workers import CleaningWorker, ScriptWorker
 
@@ -19,11 +19,18 @@ class AutoCleanViewModel(ViewModel):
     cleaning_stats_updated: pyqtSignal = pyqtSignal(dict)
     script_finished: pyqtSignal = pyqtSignal(bool)
 
-    def __init__(self, database_service: DatabaseService, data_cleaning_service: DataCleaningService, analytics_service: AnalyticsService):
+    def __init__(
+            self,
+            database_service: DatabaseService,
+            data_cleaning_service: DataCleaningService,
+            analytics_service: AnalyticsService,
+            analytics_notifier: AnalyticsNotifier
+    ):
         super().__init__()
         self.database_service = database_service
         self.data_cleaning_service = data_cleaning_service
         self.analytics_service = analytics_service
+        self._notifier = analytics_notifier
         self._nav_destination = Screen.AUTO_CLEAN
         self._table = None
         self._cleaning_config = None
@@ -152,6 +159,11 @@ class AutoCleanViewModel(ViewModel):
         self._cleaning_running = False
         self.cleaning_running_changed.emit(self._cleaning_running)
         self.cleaning_finished.emit(success)
+
+        if success:
+            self._notifier.statistics_updated.emit(self.analytics_service.statistics)
+            self._notifier.plots_updated.emit(self.analytics_service.plots)
+            self._notifier.suggestions_updated.emit(self.analytics_service.suggestions)
 
     def run_script_from_file(self, script_path: str):
         self.worker = ScriptWorker(self.data_cleaning_service, script_path)
