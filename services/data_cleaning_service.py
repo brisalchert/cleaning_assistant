@@ -115,6 +115,21 @@ class DataCleaningService(AbstractService, ModelEditor):
 
         return before - after
 
+    def impute_missing_mode(self, column: str) -> int:
+        before = self._table[column].isna().sum()
+        self._table = self._table[column].fillna(self._table.mode())
+        after = self._table[column].isna().sum()
+        self._model.set_table(self._table_name, self._table)
+
+        return before - after
+
+    def standardize(self, column: str):
+        mean = self._table[column].mean()
+        std = self._table[column].std()
+
+        self._table[column] = (self._table[column] - mean) / std
+        self._model.set_table(self._table_name, self._table)
+
     def drop_missing(self, column: str) -> int:
         before = len(self._table)
         self._table[column] = self._table[column].dropna()

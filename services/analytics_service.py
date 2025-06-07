@@ -164,8 +164,28 @@ class AnalyticsService(AbstractService, ModelEditor):
         canvas.draw()
 
     def generate_suggestions(self):
-        # TODO: Implement generate_suggestions
-        pass
+        self._suggestions["missingness"] = """If a column contains only 5% or fewer missing values,
+        the records with missing values can be dropped. If there are more than 5% missing values,
+        consider imputing values with measures of center. Imputing with the mean is appropriate for
+        columns with a roughly normal distribution, whereas imputing with the median is appropriate for
+        columns with a skewed distribution. For non-numeric columns, consider imputing with the mode."""
+
+        self._suggestions["outliers"] = """Outliers can impact the distribution of a column by 
+        'pulling' the mean in one direction or the other. They can also make it more difficult
+        for machine learning models to learn patterns in the dataset. For numeric columns, consider
+        dropping records containing outliers. For datetime columns or string columns, use the query
+        tool in the table view screen to examine outlying dates or long/short strings more closely
+        for issues."""
+
+        self._suggestions["categories"] = """This tool can catch minor spelling errors in category
+        names, but larger errors or extraneous categories may go unprocessed. Examine the category
+        list below for each categorical column. If necessary, provide a correction map for cleaning
+        the remaining categories. Format the map as follows: \"[incorrect_category]: [corrected_category]\".
+        Use commas to separate entries."""
+
+        self._suggestions["distributions"] = """Machine learning models can struggle with numeric data
+        that follows a skewed distribution. Consider standardizing columns that do not follow a normal
+        distribution or have many outliers."""
 
     def save_stats(self):
         # TODO: Implement save_stats
