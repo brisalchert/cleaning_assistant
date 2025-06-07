@@ -26,4 +26,3 @@ class Configuration(Enum):
     ANALYZE_OUTLIERS = "AnalyzeOutliers"
     ANALYZE_MISSINGNESS = "AnalyzeMissingness"
     ANALYZE_CATEGORIES = "AnalyzeCategories"
-    ANALYZE_UNITS = "AnalyzeUnits"

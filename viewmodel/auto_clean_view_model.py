@@ -85,8 +85,7 @@ class AutoCleanViewModel(ViewModel):
         self._analytics_config = {
             Configuration.COLUMNS: {},
             Configuration.ANALYZE_MISSINGNESS: False,
-            Configuration.ANALYZE_CATEGORIES: False,
-            Configuration.ANALYZE_UNITS: False
+            Configuration.ANALYZE_CATEGORIES: False
         }
 
     def init_cleaning_stats(self):

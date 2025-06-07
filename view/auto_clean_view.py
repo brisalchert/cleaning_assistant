@@ -275,21 +275,6 @@ class AutoCleanView(AbstractView):
             update_on_init=True
         )
 
-        # Unit uniformity for numerical values
-        self.unit_uniformity_label = QLabel("Unit Uniformity:")
-        self.unit_uniformity_label.setFont(QFont(self.font, 12))
-        self.unit_uniformity_checkbox = QCheckBox("Analyze unit uniformity")
-        self.unit_uniformity_checkbox.setFont(QFont(self.font, 10))
-        self.analytics_config_container.layout().addWidget(self.unit_uniformity_label)
-        self.analytics_config_container.layout().addWidget(self.unit_uniformity_checkbox)
-
-        self.bind_analysis_config_update(
-            self.unit_uniformity_checkbox.checkStateChanged,
-            Configuration.ANALYZE_UNITS,
-            self.unit_uniformity_checkbox.isChecked,
-            update_on_init=True
-        )
-
         # Align layout items to the top
         self.analytics_config_container.layout().addStretch()
 
