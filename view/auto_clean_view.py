@@ -111,6 +111,7 @@ class AutoCleanView(AbstractView):
         # Set up view header
         self.header_label = QLabel("Auto-Cleaning Configuration")
         self.header_label.setFont(QFont(self.font, 24))
+        self.header_label.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
         self.script_export_button = QPushButton("Export Cleaning Script")
         self.script_export_button.setFont(QFont(self.font, 14))
         self.script_export_button.setEnabled(False)

@@ -43,7 +43,3 @@ class AnalyticsViewModel(ViewModel):
     def save_plots(self):
         # TODO: Implement save_plots
         pass
-
-    def export_cleaning_script(self):
-        # TODO: Implement export_cleaning_script
-        pass
