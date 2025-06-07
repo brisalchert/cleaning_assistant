@@ -1,3 +1,5 @@
+import os
+import re
 import subprocess
 from pathlib import Path
 
@@ -249,6 +251,7 @@ class DataCleaningService(AbstractService, ModelEditor):
         """Generates a cleaning script for the current table and configuration."""
         lines = [
             "import pandas as pd",
+            "from pathlib import Path",
             "from fuzzywuzzy import process",
             "def correct_spelling(row, categories: list):",
             "\tmatch = process.extractOne(row, categories)",
@@ -256,7 +259,7 @@ class DataCleaningService(AbstractService, ModelEditor):
             "\t\treturn match[0]",
             "\telse:",
             "\t\treturn row",
-            f"df = pd.read_csv({self._table_name}.csv)"
+            f"df = pd.read_csv('{self._table_name}.csv')"
         ]
 
         # Column-specific cleaning
@@ -308,8 +311,11 @@ class DataCleaningService(AbstractService, ModelEditor):
             for column in self._table.columns:
                 lines.append(f"df[{column}] = df[{column}].fillna(df[{column}].median())")
 
-        lines.append(f"df.to_csv('{self._table_name}.csv', index=False)")
-        lines.append(f"print('Output saved to {self._table_name}.csv')")
+        lines.append(f"desktop = Path.home() / 'Desktop'")
+        lines.append(f"file_path = desktop / '{self._table_name}.csv'")
+
+        lines.append(f"df.to_csv(file_path, index=False)")
+        lines.append(f"print('Output saved to desktop.')")
         lines.append("# CLEANING ASSISTANT SCRIPT FILE")
 
         self._cleaning_script = "\n".join(lines)
@@ -321,7 +327,7 @@ class DataCleaningService(AbstractService, ModelEditor):
         file_path = Path(f"{folder}/cleaning_script.py")
         file_path.write_text(self._cleaning_script)
 
-    def apply_cleaning_script(self, script_path: str):
+    def apply_cleaning_script(self, script_path: str) -> bool:
         self._loaded_script_content = ""
 
         with open(script_path, "r") as file:
@@ -329,15 +335,37 @@ class DataCleaningService(AbstractService, ModelEditor):
 
         lines = self._loaded_script_content.splitlines()
         if not lines[-1].startswith("# CLEANING ASSISTANT SCRIPT FILE"):
-            return
+            return False
 
-        result = subprocess.run(
+        if not lines[9].startswith("df = pd.read_csv"):
+            return False
+
+        # Temporarily place CSV file in current directory
+        table_name = None
+        for line in lines:
+            match = re.search(r'read_csv\(\s*[\'"]([\w_]+)\.csv[\'"]\s*\)', line)
+            if match:
+                table_name = match.group(1)
+                break
+
+        if not table_name:
+            return False
+
+        csv_path = f"{table_name}.csv"
+
+        self._model.get_table(table_name).to_csv(csv_path, index=False)
+
+        subprocess.run(
             ["python", script_path],
             capture_output=True,
             text=True
         )
-        # TODO: Connect output with messaging in view (use a new worker)
-        print("Result: ", result.stdout)
+
+        # Remove temporary CSV
+        if os.path.exists(csv_path):
+            os.remove(csv_path)
+
+        return True
 
 def correct_spelling(row, categories: list):
     """Support function for correcting category spelling errors"""

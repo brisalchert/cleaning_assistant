@@ -4,7 +4,7 @@ from navigation import Screen
 from services import DataCleaningService, AnalyticsService, DatabaseService
 from utils import Configuration
 from viewmodel import ViewModel
-from workers import CleaningWorker
+from workers import CleaningWorker, ScriptWorker
 
 
 class AutoCleanViewModel(ViewModel):
@@ -17,6 +17,7 @@ class AutoCleanViewModel(ViewModel):
     progress_updated: pyqtSignal = pyqtSignal(int)
     current_step_changed: pyqtSignal = pyqtSignal(str)
     cleaning_stats_updated: pyqtSignal = pyqtSignal(dict)
+    script_finished: pyqtSignal = pyqtSignal(bool)
 
     def __init__(self, database_service: DatabaseService, data_cleaning_service: DataCleaningService, analytics_service: AnalyticsService):
         super().__init__()
@@ -104,7 +105,7 @@ class AutoCleanViewModel(ViewModel):
             self.stats[key] += value
             self.cleaning_stats_updated.emit(self.stats)
 
-    def start_worker(self, on_finished, error_signal, progress_signal, step_signal):
+    def start_worker(self, on_finished, error_signal=None, progress_signal=None, step_signal=None):
         self.worker_thread = QThread()
         self.worker.moveToThread(self.worker_thread)
 
@@ -114,17 +115,21 @@ class AutoCleanViewModel(ViewModel):
 
         # Connect signals and slots
         self.worker.finished.connect(on_finished)
-        self.worker.error.connect(error_signal.emit)
-        self.worker.progress.connect(progress_signal.emit)
-        self.worker.step.connect(step_signal.emit)
+        if error_signal:
+            self.worker.error.connect(error_signal.emit)
+        if progress_signal:
+            self.worker.progress.connect(progress_signal.emit)
+        if step_signal:
+            self.worker.step.connect(step_signal.emit)
 
         # Connect cleaning stats signals
-        self.worker.cleaning_operations.connect(lambda x: self.update_stats("operations", x))
-        self.worker.data_types_converted.connect(lambda x: self.update_stats("data_types", x))
-        self.worker.duplicates_removed.connect(lambda x: self.update_stats("duplicates", x))
-        self.worker.outliers_removed.connect(lambda x: self.update_stats("outliers", x))
-        self.worker.missing_values_dropped.connect(lambda x: self.update_stats("missing_dropped", x))
-        self.worker.missing_values_imputed.connect(lambda x: self.update_stats("missing_imputed", x))
+        if step_signal:
+            self.worker.cleaning_operations.connect(lambda x: self.update_stats("operations", x))
+            self.worker.data_types_converted.connect(lambda x: self.update_stats("data_types", x))
+            self.worker.duplicates_removed.connect(lambda x: self.update_stats("duplicates", x))
+            self.worker.outliers_removed.connect(lambda x: self.update_stats("outliers", x))
+            self.worker.missing_values_dropped.connect(lambda x: self.update_stats("missing_dropped", x))
+            self.worker.missing_values_imputed.connect(lambda x: self.update_stats("missing_imputed", x))
 
         # Thread cleanup
         self.worker.finished.connect(self.worker_thread.quit)
@@ -150,7 +155,11 @@ class AutoCleanViewModel(ViewModel):
         self.cleaning_finished.emit(success)
 
     def run_script_from_file(self, script_path: str):
-        self.data_cleaning_service.apply_cleaning_script(script_path)
+        self.worker = ScriptWorker(self.data_cleaning_service, script_path)
+        self.start_worker(self.on_script_finished)
+
+    def on_script_finished(self, success: bool):
+        self.script_finished.emit(success)
 
     def save_config_to_file(self, file_path: str):
         self.data_cleaning_service.save_cleaning_script(file_path)
