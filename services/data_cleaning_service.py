@@ -153,21 +153,27 @@ class DataCleaningService(AbstractService):
             raise ValueError(f"The \"{column}\" column is not categorical.")
 
         original = self._table[column].astype(str).copy()
-        self._table[column] = self._table[column].astype(str).replace(correction_map)
-        changed = (original != self._table[column]).sum()
-        self._table[column] = self._table[column].astype("category")
+        replaced = self._table[column].astype(str).replace(correction_map)
+
+        self._table[column] = self._table[column].cat.rename_categories(correction_map)
+
+        changed = (original != replaced).sum()
         self._model.set_table(self._table_name, self._table)
 
         return changed
 
     def autocorrect_categories(self, column: str, correct_categories: list[str]) -> int:
-        if not isinstance(self._table[column], pd.CategoricalDtype):
+        if not self._table[column].dtype == "category":
             raise ValueError(f"The \"{column}\" column is not categorical.")
 
-        original = self._table[column].copy()
-        self._table[column] = self._table[column].apply(lambda row: correct_spelling(row, correct_categories))
-        changed = self._table[column][original != self._table[column]].count()
-        self._table[column] = self._table[column].astype("category")
+        original = self._table[column].astype(str).copy()
+        replaced = self._table[column].astype(str).apply(lambda row: correct_spelling(row, correct_categories))
+
+        new_categories = replaced.astype("category")
+
+        self._table[column] = new_categories
+
+        changed = (original != replaced).sum()
         self._model.set_table(self._table_name, self._table)
 
         return changed

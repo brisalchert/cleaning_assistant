@@ -34,7 +34,7 @@ def generate_random_dataframe(n_rows: int = 100, nan_prob: float = 0.1, seed: in
         ).tolist(), pd.NaT
     )
     string_values = maybe_na([random_string() for _ in range(n_rows)], pd.NA)
-    category_values = maybe_na(rng.choice(["A", "B", "C", "D", "E", "F"], size=n_rows).tolist(), pd.NA)
+    category_values = maybe_na(rng.choice(["Apple", "Banana", "Carrot", "Durian", "Edamame", "Fruit"], size=n_rows).tolist(), pd.NA)
     object_values = maybe_na([random_object() for _ in range(n_rows)], None)
 
     df = pd.DataFrame({

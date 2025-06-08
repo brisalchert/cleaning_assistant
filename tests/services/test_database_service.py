@@ -1,16 +1,23 @@
 from unittest.mock import Mock, patch, MagicMock, mock_open
+import pytest
 from services import DatabaseService
+
+
+@pytest.fixture
+def mock_model():
+    model = MagicMock()
+    return model
+
+@pytest.fixture
+def service(mock_model):
+    return DatabaseService(mock_model)
 
 @patch("services.database_service.pd.read_csv")
 @patch("builtins.open", new_callable=mock_open, read_data="fake content")
-def test_load_from_files_sets_in_data_model(mock_open_func, mock_read_csv):
+def test_load_from_files_sets_in_data_model(mock_open_func, mock_read_csv, service, mock_model):
     # Mock return value for read_csv
     fake_df = MagicMock()
     mock_read_csv.return_value = fake_df
-
-    # Mock model
-    model = Mock()
-    service = DatabaseService(model)
 
     csv_config = {
         "sep": ",",
@@ -26,8 +33,8 @@ def test_load_from_files_sets_in_data_model(mock_open_func, mock_read_csv):
 
     # Assertions
     assert result is True
-    model.set_database.assert_called_once()
-    tables_passed = model.set_database.call_args[0][0]
+    mock_model.set_database.assert_called_once()
+    tables_passed = mock_model.set_database.call_args[0][0]
     assert "table1" in tables_passed
     assert "table2" in tables_passed
     assert tables_passed["table1"] is fake_df
@@ -35,7 +42,7 @@ def test_load_from_files_sets_in_data_model(mock_open_func, mock_read_csv):
 
 @patch("services.database_service.create_engine")
 @patch("services.database_service.pd.read_sql")
-def test_load_from_database_sets_data_in_model(mock_read_sql, mock_create_engine):
+def test_load_from_database_sets_data_in_model(mock_read_sql, mock_create_engine, service, mock_model):
     dummy_df = MagicMock()
     mock_read_sql.return_value = dummy_df
 
@@ -50,9 +57,6 @@ def test_load_from_database_sets_data_in_model(mock_read_sql, mock_create_engine
     mock_engine.connect.return_value.__enter__.return_value = mock_connection
     mock_create_engine.return_value = mock_engine
 
-    model = Mock()
-    service = DatabaseService(model)
-
     connection_details = {
         "db_name": "test_db",
         "user": "user",
@@ -65,7 +69,7 @@ def test_load_from_database_sets_data_in_model(mock_read_sql, mock_create_engine
 
     assert result is True
     mock_create_engine.assert_called_once()
-    model.set_database.assert_called_once()
-    tables_passed = model.set_database.call_args[0][0]
+    mock_model.set_database.assert_called_once()
+    tables_passed = mock_model.set_database.call_args[0][0]
     assert "table1" in tables_passed
     assert "table2" in tables_passed
