@@ -1,4 +1,5 @@
 from PyQt6.QtCore import pyqtSignal, QThread
+from pandas import DataFrame
 
 from navigation import Screen
 from services import DataCleaningService, AnalyticsService, DatabaseService
@@ -32,6 +33,7 @@ class AutoCleanViewModel(ViewModel):
         self.analytics_service = analytics_service
         self._notifier = analytics_notifier
         self._nav_destination = Screen.AUTO_CLEAN
+        self._old_data = self.data_cleaning_service.model.get_database()
         self._table = None
         self._cleaning_config = None
         self._analytics_config = None
@@ -41,11 +43,17 @@ class AutoCleanViewModel(ViewModel):
         self.stats = {}
 
         # Connect to model updates
-        self.database_service.model.data_changed.connect(lambda database: self.tables_loaded.emit(database))
+        self.database_service.model.data_changed.connect(self.on_data_changed)
 
         # Initialize configurations
         self.init_cleaning_config()
         self.init_analytics_config()
+
+    def on_data_changed(self, new_data = dict[str: DataFrame]):
+        # Only emit signal if database tables have changed
+        if self._old_data is None or self._old_data.keys() != new_data.keys():
+            self.tables_loaded.emit(new_data)
+            self._old_data = new_data
 
     def set_table(self, table_name: str):
         self._table = self.data_cleaning_service.set_and_retrieve_table(table_name)

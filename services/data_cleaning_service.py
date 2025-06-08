@@ -69,6 +69,9 @@ class DataCleaningService(AbstractService):
         return 0
 
     def impute_missing_mean(self, column: str) -> int:
+        if not pd.api.types.is_numeric_dtype(self._table[column]):
+            raise ValueError(f"The \"{column}\" column is not numeric.")
+
         before = self._table[column].isna().sum()
         self._table[column] = self._table[column].fillna(self._table[column].mean())
         after = self._table[column].isna().sum()
@@ -85,6 +88,9 @@ class DataCleaningService(AbstractService):
         return before - after
 
     def impute_missing_median(self, column: str) -> int:
+        if not pd.api.types.is_numeric_dtype(self._table[column]):
+            raise ValueError(f"The \"{column}\" column is not numeric.")
+
         before = self._table[column].isna().sum()
         self._table[column] = self._table[column].fillna(self._table[column].median())
         after = self._table[column].isna().sum()
@@ -111,6 +117,9 @@ class DataCleaningService(AbstractService):
         return before - after
 
     def standardize(self, column: str):
+        if not pd.api.types.is_numeric_dtype(self._table[column]):
+            raise ValueError(f"The \"{column}\" column is not numeric.")
+
         mean = self._table[column].mean()
         std = self._table[column].std()
 
@@ -140,15 +149,21 @@ class DataCleaningService(AbstractService):
             return self._table[column].unique()
 
     def clean_categories(self, column: str, correction_map: dict) -> int:
-        original = self._table[column].copy()
-        self._table[column] = self._table[column].replace(correction_map)
-        changed = self._table[column][original != self._table[column]].count()
+        if not self._table[column].dtype == "category":
+            raise ValueError(f"The \"{column}\" column is not categorical.")
+
+        original = self._table[column].astype(str).copy()
+        self._table[column] = self._table[column].astype(str).replace(correction_map)
+        changed = (original != self._table[column]).sum()
         self._table[column] = self._table[column].astype("category")
         self._model.set_table(self._table_name, self._table)
 
         return changed
 
     def autocorrect_categories(self, column: str, correct_categories: list[str]) -> int:
+        if not isinstance(self._table[column], pd.CategoricalDtype):
+            raise ValueError(f"The \"{column}\" column is not categorical.")
+
         original = self._table[column].copy()
         self._table[column] = self._table[column].apply(lambda row: correct_spelling(row, correct_categories))
         changed = self._table[column][original != self._table[column]].count()
@@ -166,6 +181,9 @@ class DataCleaningService(AbstractService):
         return changed
 
     def truncate_strings(self, column: str, max_length: int) -> int:
+        if not pd.api.types.is_string_dtype(self._table[column]):
+            raise ValueError(f"The \"{column}\" column is not a string data type.")
+
         original = self._table[column].copy()
         self._table[column] = self._table[column].str.slice(0, max_length)
         changed = self._table[column][original != self._table[column]].count()
@@ -203,12 +221,19 @@ class DataCleaningService(AbstractService):
         return df_outliers
 
     def drop_outliers(self, column: str, minimum: float = None, maximum: float = None) -> int:
-        if minimum is None or maximum is None:
+        if not pd.api.types.is_numeric_dtype(self._table[column]):
+            raise ValueError(f"The \"{column}\" column is not numeric.")
+
+        if minimum is None and maximum is None:
             q1 = self._table[column].quantile(0.25)
             q3 = self._table[column].quantile(0.75)
             iqr = q3 - q1
 
             minimum, maximum = q1 - 1.5 * iqr, q3 + 1.5 * iqr
+        elif minimum is not None and maximum is None:
+            maximum = float("inf")
+        elif minimum is None and maximum is not None:
+            minimum = float("-inf")
 
         before = len(self._table)
         self._table = self._table[(self._table[column] >= minimum) & (self._table[column] <= maximum)]
@@ -217,15 +242,37 @@ class DataCleaningService(AbstractService):
 
         return before - after
 
-    def drop_date_outliers(self, column: str, minimum = None, maximum = None) -> int:
-        if minimum is not None and maximum is not None:
-            before = len(self._table)
-            self._table = self._table[(self._table[column] >= minimum) & (self._table[column] <= maximum)]
-            after = len(self._table)
-            self._model.set_table(self._table_name, self._table)
+    def drop_standard_outliers(self, column: str, upper: bool=False, lower: bool=False) -> int:
+        q1 = self._table[column].quantile(0.25)
+        q3 = self._table[column].quantile(0.75)
 
-            return before - after
-        return 0
+        if upper and lower:
+            return self.drop_outliers(column, minimum=q1, maximum=q3)
+        elif upper:
+            return self.drop_outliers(column, maximum=q3)
+        elif lower:
+            return self.drop_outliers(column, minimum=q1)
+        else:
+            return 0
+
+    def drop_date_outliers(self, column: str, minimum = None, maximum = None) -> int:
+        if minimum is None and maximum is None:
+            q1 = self._table[column].quantile(0.25)
+            q3 = self._table[column].quantile(0.75)
+            iqr = q3 - q1
+
+            minimum, maximum = q1 - 1.5 * iqr, q3 + 1.5 * iqr
+        elif minimum is not None and maximum is None:
+            maximum = pd.to_datetime("2100-01-01")
+        elif minimum is None and maximum is not None:
+            minimum = pd.to_datetime(0)
+
+        before = len(self._table)
+        self._table = self._table[(self._table[column] >= minimum) & (self._table[column] <= maximum)]
+        after = len(self._table)
+        self._model.set_table(self._table_name, self._table)
+
+        return before - after
 
     def set_cleaning_script(self, script: str):
         # Validate cleaning script before loading

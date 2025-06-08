@@ -1,5 +1,4 @@
 import json
-import os
 from pathlib import Path
 
 from PyQt6.QtCore import pyqtSignal
@@ -16,6 +15,8 @@ class AnalyticsViewModel(ViewModel):
     plot_data_updated: pyqtSignal = pyqtSignal(dict)
     suggestions_updated: pyqtSignal = pyqtSignal(dict)
     analytics_updated: pyqtSignal = pyqtSignal(bool)
+    suggestion_result: pyqtSignal = pyqtSignal(bool)
+    suggestion_error: pyqtSignal = pyqtSignal(str)
 
     def __init__(
             self,
@@ -57,9 +58,36 @@ class AnalyticsViewModel(ViewModel):
     def on_analytics_updated(self, available: bool):
         self.analytics_updated.emit(available)
 
-    def apply_suggestion(self, operation: Operation, column: str):
-        # TODO: Implement apply_suggestion
-        pass
+    def apply_suggestion(
+            self,
+            operation: Operation,
+            column: str,
+            category_map=None
+    ):
+        try:
+            if operation == Operation.DROP_MISSING:
+                self.data_cleaning_service.drop_missing(column)
+            elif operation == Operation.IMPUTE_MEAN:
+                self.data_cleaning_service.impute_missing_mean(column)
+            elif operation == Operation.IMPUTE_MEDIAN:
+                self.data_cleaning_service.impute_missing_median(column)
+            elif operation == Operation.IMPUTE_MODE:
+                self.data_cleaning_service.impute_missing_mode(column)
+            elif operation == Operation.DROP_UPPER:
+                self.data_cleaning_service.drop_standard_outliers(column, upper=True)
+            elif operation == Operation.DROP_LOWER:
+                self.data_cleaning_service.drop_standard_outliers(column, lower=True)
+            elif operation == Operation.STANDARDIZE:
+                self.data_cleaning_service.standardize(column)
+            elif operation == Operation.CORRECT_CATEGORIES and category_map is not None:
+                self.data_cleaning_service.clean_categories(column, category_map)
+            else:
+                raise ValueError('Invalid operation')
+
+            self.suggestion_result.emit(True)
+        except Exception as e:
+            self.suggestion_result.emit(False)
+            self.suggestion_error.emit(str(e))
 
     def save_stats(self, directory: str):
         filename = "cleaning_statistics.json"

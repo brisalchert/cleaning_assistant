@@ -4,7 +4,7 @@ import seaborn as sns
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QScrollArea, QSizePolicy, QLabel, QPushButton, QHBoxLayout, \
-    QStackedWidget, QComboBox, QLayout, QFrame, QLineEdit, QFileDialog
+    QStackedWidget, QComboBox, QLayout, QFrame, QLineEdit, QFileDialog, QMessageBox
 from pandas import DataFrame, Series
 
 from navigation import NavigationController
@@ -26,6 +26,7 @@ class AnalyticsView(AbstractView):
         super().__init__()
         self._view_model = view_model
         self._nav_controller = nav_controller
+        self.dialog = None
 
         # Set up view header
         self.header_label = QLabel("Cleaning Analytics")
@@ -90,9 +91,13 @@ class AnalyticsView(AbstractView):
         self.missing_column_label = QLabel("Column:")
         self.missing_column_selector = QComboBox()
         self.drop_missing_button = QPushButton("Drop Missing")
+        self.drop_missing_button.clicked.connect(self.on_drop_missing)
         self.impute_missing_mean_button = QPushButton("Impute Mean")
+        self.impute_missing_mean_button.clicked.connect(self.on_impute_mean)
         self.impute_missing_median_button = QPushButton("Impute Median")
+        self.impute_missing_median_button.clicked.connect(self.on_impute_median)
         self.impute_missing_mode_button = QPushButton("Impute Mode")
+        self.impute_missing_mode_button.clicked.connect(self.on_impute_mode)
 
         self.missingness_button_row = QWidget()
         self.missingness_button_row.setLayout(QHBoxLayout())
@@ -141,8 +146,10 @@ class AnalyticsView(AbstractView):
         self.outlier_column_selector = QComboBox()
         self.outlier_column_selector.setFont(QFont(self.font, 12))
         self.drop_upper_button = QPushButton("Drop Upper Outliers")
+        self.drop_upper_button.clicked.connect(self.on_drop_upper)
         self.drop_upper_button.setFont(QFont(self.font, 12))
         self.drop_lower_button = QPushButton("Drop Lower Outliers")
+        self.drop_lower_button.clicked.connect(self.on_drop_lower)
         self.drop_lower_button.setFont(QFont(self.font, 12))
 
         self.outlier_button_row = QWidget()
@@ -204,16 +211,17 @@ class AnalyticsView(AbstractView):
         self.category_stats_container = QWidget()
         self.category_stats_container.setLayout(QVBoxLayout())
 
-        self.category_selector_label = QLabel("Category:")
-        self.category_selector_label.setFont(QFont(self.font, 14))
+        self.category_selector_label = QLabel("Column:")
+        self.category_selector_label.setFont(QFont(self.font, 12))
         self.category_correction_selector = QComboBox()
         self.category_correction_selector.setFont(QFont(self.font, 12))
         self.category_correction_label = QLabel("Correction Mapping:")
-        self.category_correction_label.setFont(QFont(self.font, 14))
+        self.category_correction_label.setFont(QFont(self.font, 12))
         self.category_correction_input = QLineEdit()
         self.category_correction_input.setPlaceholderText("Format: [incorrect_category]: [correct_category]")
         self.category_correction_input.setFont(QFont(self.font, 12))
         self.category_correction_button = QPushButton("Correct Categories")
+        self.category_correction_button.clicked.connect(self.on_correct_categories)
         self.category_correction_button.setFont(QFont(self.font, 12))
 
         self.category_selector_container = QWidget()
@@ -258,6 +266,8 @@ class AnalyticsView(AbstractView):
         self._view_model.plot_data_updated.connect(self.update_plots)
         self._view_model.suggestions_updated.connect(self.update_suggestions)
         self._view_model.analytics_updated.connect(self.update_analytics)
+        self._view_model.suggestion_result.connect(self.on_suggestion_applied)
+        self._view_model.suggestion_error.connect(self.show_error_dialog)
 
         # Connect UI to ViewModel
         self.stats_export_button.clicked.connect(self.export_stats)
@@ -485,7 +495,7 @@ class AnalyticsView(AbstractView):
         canvas = MplCanvas()
         ax = canvas.ax
         sns.boxplot(x="column", y="value", data=df, showfliers=True, ax=ax)
-        ax.set_title("Boxplot for Outliers (Numeric, Dates, and String Lengths [Normalized])")
+        ax.set_title("Boxplot for Outliers (Numeric Columns [Normalized])")
         ax.tick_params(axis='x', labelrotation=45)
         canvas.fig.subplots_adjust(left = 0.10, right = 0.95, top = 0.90, bottom = 0.30)
         canvas.draw()
@@ -528,3 +538,56 @@ class AnalyticsView(AbstractView):
         distribution_plots = self.distribution_plots if "distributions" in self._view_model.plot_data else None
 
         self.export_plots(missing_plot, outlier_plot, distribution_plots)
+
+    def on_drop_missing(self):
+        column = self.missing_column_selector.currentText()
+        self._view_model.apply_suggestion(Operation.DROP_MISSING, column)
+
+    def on_impute_mean(self):
+        column = self.missing_column_selector.currentText()
+        self._view_model.apply_suggestion(Operation.IMPUTE_MEAN, column)
+
+    def on_impute_median(self):
+        column = self.missing_column_selector.currentText()
+        self._view_model.apply_suggestion(Operation.IMPUTE_MEDIAN, column)
+
+    def on_impute_mode(self):
+        column = self.missing_column_selector.currentText()
+        self._view_model.apply_suggestion(Operation.IMPUTE_MODE, column)
+
+    def on_drop_upper(self):
+        column = self.outlier_column_selector.currentText()
+        self._view_model.apply_suggestion(Operation.DROP_UPPER, column)
+
+    def on_drop_lower(self):
+        column = self.outlier_column_selector.currentText()
+        self._view_model.apply_suggestion(Operation.DROP_LOWER, column)
+
+    def on_correct_categories(self):
+        column = self.category_correction_selector.currentText()
+        corrections = self.category_correction_input.text().split(",")
+        correction_map = {}
+
+        for correction in corrections:
+            old, new = map(str.strip, correction.split(":", 1))
+            correction_map[old] = new
+
+        self._view_model.apply_suggestion(Operation.CORRECT_CATEGORIES, column, category_map=correction_map)
+
+    def on_suggestion_applied(self, success: bool):
+        if success:
+            self.dialog = QMessageBox()
+            self.dialog.setIcon(QMessageBox.Icon.NoIcon)
+            self.dialog.setWindowTitle("Cleaning Operation Applied")
+            self.dialog.setText("Cleaning operation applied successfully!")
+            self.dialog.setStandardButtons(QMessageBox.StandardButton.Ok)
+            self.dialog.show()
+
+    def show_error_dialog(self, error: str):
+        self.dialog = QMessageBox()
+        self.dialog.setIcon(QMessageBox.Icon.Warning)
+        self.dialog.setWindowTitle("Cleaning Operation Error")
+        self.dialog.setText("There was an error while applying the cleaning operation:")
+        self.dialog.setInformativeText(error)
+        self.dialog.setStandardButtons(QMessageBox.StandardButton.Ok)
+        self.dialog.show()

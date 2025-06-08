@@ -43,6 +43,7 @@ class AnalyticsService(AbstractService):
     def set_table(self, table_name: str):
         self._table_name = table_name
         self._table = self._model.get_table(table_name)
+        self.reset_analytics()
 
     def reset_analytics(self):
         self._statistics = {}
@@ -58,26 +59,8 @@ class AnalyticsService(AbstractService):
 
     def get_outlier_columns(self) -> DataFrame:
         """Returns a DataFrame with only the columns of the current table that
-        are relevant for outlier calculations. This includes numeric columns,
-        datetime columns, and the lengths of string/object columns."""
-        df_numeric = self._table.select_dtypes(include="number")
-        df_dates = self._table.select_dtypes(include=["datetime", "datetime64[ns]"]).copy()
-        df_strings = self._table.select_dtypes(include=["object", "string"]).copy()
-
-        # Convert dates to ordinal, avoiding missing values
-        for col in df_dates.columns:
-            df_dates[col] = df_dates[col].map(
-                lambda x: pd.Timestamp(x).toordinal() if pd.notnull(x) else None
-            )
-
-        # Convert strings to length
-        for col in df_strings.columns:
-            df_strings[col] = df_strings[col].astype(str).str.len()
-
-        # Combine all DataFrames
-        df_combined = pd.concat([df_numeric, df_dates, df_strings], axis=1)
-
-        return df_combined
+        are relevant for outlier calculations (numeric columns)."""
+        return self._table.select_dtypes(include="number")
 
     def calculate_missingness_stats(self):
         self._statistics["missingness"] = {}
@@ -119,7 +102,7 @@ class AnalyticsService(AbstractService):
         self._plot_data["missingness"] = self._table
 
     def create_outlier_plot_data(self):
-        df_combined = self.get_outlier_columns()
+        df_outliers = self.get_outlier_columns()
 
         # Normalize column values
         def min_max_norm(series):
@@ -129,7 +112,7 @@ class AnalyticsService(AbstractService):
                 return series * 0  # Constant Series of all 0s
             return (series - min_val) / (max_val - min_val)
 
-        df_normalized = df_combined.apply(min_max_norm)
+        df_normalized = df_outliers.apply(min_max_norm)
         self._plot_data["outliers"] = df_normalized
 
     def create_distribution_plot_data(self, column: str):
@@ -156,11 +139,8 @@ class AnalyticsService(AbstractService):
             "Outliers can impact the distribution of a column by "
             "\"pulling\" the mean in one direction or the other. They can also make it more difficult "
             "for machine learning models to learn patterns in the dataset. For numeric columns, consider "
-            "dropping records containing outliers. For datetime columns or string columns, use the query "
-            "tool in the table view screen to examine outlying dates or long/short strings more closely "
-            "for issues."
+            "dropping records containing outliers."
         )
-
 
         self._suggestions["categories"] = (
             "This tool can catch minor spelling errors in category names, but larger errors or extraneous "
@@ -173,11 +153,3 @@ class AnalyticsService(AbstractService):
             "Machine learning models can struggle with numeric data that follows a skewed distribution. "
             "Consider standardizing columns that do not follow a normal distribution or have many outliers."
         )
-
-    def save_stats(self):
-        # TODO: Implement save_stats
-        pass
-
-    def save_plots(self):
-        # TODO: Implement save_plots
-        pass
