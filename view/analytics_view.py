@@ -360,7 +360,6 @@ class AnalyticsView(AbstractView):
             target_index = self.get_plot_index(self.missingness_plot, layout)
 
             if target_index == -1:
-                print("Warning: missingness_plot not found in layout")
                 return
 
             self.create_missingness_plot(plot_data["missingness"], target_index)
@@ -382,7 +381,6 @@ class AnalyticsView(AbstractView):
             target_index = self.get_plot_index(self.outlier_plot, layout)
 
             if target_index == -1:
-                print("Warning: outlier_plot not found in layout")
                 return
 
             # Melt DataFrame for proper plotting format

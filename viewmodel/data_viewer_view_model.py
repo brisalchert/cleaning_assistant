@@ -70,7 +70,6 @@ class DataViewerViewModel(ViewModel):
         try:
             result = self.query_service.execute_query()
         except PandaSQLException as e:
-            print(f"PandaSQL Error: {str(e)}")
             self.query_error_changed.emit(str(e))
 
         if result is not None:

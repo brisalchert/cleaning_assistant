@@ -52,7 +52,6 @@ class DataFrameModel(QAbstractTableModel):
         return self._dataframe
 
     def set_dataframe(self, dataframe: DataFrame):
-        print("Setting new DataFrame")
         self.beginResetModel()
         self._dataframe = dataframe
         self.endResetModel()
