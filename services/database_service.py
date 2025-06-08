@@ -88,7 +88,6 @@ class DatabaseService(AbstractService, DatabaseAccess):
     # --- Subclass methods ---
 
     def load_from_database(self, connection_details: dict) -> bool:
-        # TODO: Add exception handling
         self._set_connection_details(**connection_details)
         self._set_engine()
 

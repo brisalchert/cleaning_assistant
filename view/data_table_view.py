@@ -372,8 +372,16 @@ class DataTableView(AbstractView):
         error_dialog.setIcon(QMessageBox.Icon.Warning)
         error_dialog.exec()
 
+    def show_sorting_error_message(self, error: str):
+        error_dialog = QMessageBox()
+        error_dialog.setWindowTitle("Sort Error")
+        error_dialog.setText("There was an error performing the action.")
+        error_dialog.setInformativeText(error)
+        error_dialog.setInformativeText(error)
+        error_dialog.setIcon(QMessageBox.Icon.Warning)
+        error_dialog.exec()
+
     def handle_data_changed(self, top_left: QModelIndex, bottom_right: QModelIndex):
-        # TODO: Prevent crashes due to invalid edits
         row = top_left.row()
         new_row_df = self.table_view.model().get_dataframe().iloc[[row]]
 
@@ -383,7 +391,6 @@ class DataTableView(AbstractView):
         self._view_model.update_row(row_adjusted, new_row_df)
 
     def sort_results(self, by: str, ascending: bool):
-        # TODO: Handle warning for filtering and sorting simultaneously
         df = self.table_filtered if self.filtered else self.table
 
         if by is None or ascending is None:
@@ -392,8 +399,11 @@ class DataTableView(AbstractView):
             return
 
         # Sort the table and update the view
-        df.sort_values(by, ascending=ascending, inplace=True)
-        self.update_page(1)
+        try:
+            df.sort_values(by, ascending=ascending, inplace=True)
+            self.update_page(1)
+        except TypeError as e:
+            self.show_sorting_error_message(str(e))
 
     def get_sort(self):
         sort = self.sort_dropdown.currentText()

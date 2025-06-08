@@ -47,9 +47,8 @@ class DataEditorService(AbstractService):
         self.redo_stack: list[list[dict]] = []
 
     def update_row(self, table_name: str, row: int, new_row_df: DataFrame) -> bool:
-        # TODO: Check data types when making edits
         old_row_df = self._model.get_table(table_name).iloc[[row]].copy(deep=True)
-        result = self._model.update_row(table_name, row, new_row_df)
+        result = self._model.update_row(table_name, new_row_df)
 
         # Update undo stack
         if result:
